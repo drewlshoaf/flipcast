@@ -20,6 +20,30 @@ function client(): ElevenLabsClient {
   return cachedClient;
 }
 
+// Process-wide cap on in-flight ElevenLabs requests. Per-job concurrency in
+// pipeline/run.ts sizes batches, but when multiple jobs run in parallel their
+// batches could exceed the account plan's concurrent-request limit (3 on the
+// current plan). This semaphore serializes anything above the cap regardless
+// of which job issued the call.
+const MAX_IN_FLIGHT = env.elevenlabsMaxConcurrent;
+let inFlight = 0;
+const waiters: Array<() => void> = [];
+
+async function acquireSlot(): Promise<void> {
+  if (inFlight < MAX_IN_FLIGHT) {
+    inFlight++;
+    return;
+  }
+  await new Promise<void>((resolve) => waiters.push(resolve));
+  inFlight++;
+}
+
+function releaseSlot(): void {
+  inFlight--;
+  const next = waiters.shift();
+  if (next) next();
+}
+
 interface EngineConfig {
   modelId: string;
   voiceSettings?: {
@@ -66,19 +90,24 @@ export async function synthesizeWithElevenLabs(
   };
   const hasSettings = Object.keys(voiceSettings).length > 0;
 
-  const audio = await client().textToSpeech.convert(
-    resolveProviderVoiceId(voice),
-    {
-      text,
-      modelId: config.modelId,
-      outputFormat: "mp3_44100_128",
-      ...(hasSettings ? { voiceSettings } : {}),
-    },
-  );
+  await acquireSlot();
+  try {
+    const audio = await client().textToSpeech.convert(
+      resolveProviderVoiceId(voice),
+      {
+        text,
+        modelId: config.modelId,
+        outputFormat: "mp3_44100_128",
+        ...(hasSettings ? { voiceSettings } : {}),
+      },
+    );
 
-  const chunks: Buffer[] = [];
-  for await (const chunk of audio as AsyncIterable<Uint8Array>) {
-    chunks.push(Buffer.from(chunk));
+    const chunks: Buffer[] = [];
+    for await (const chunk of audio as AsyncIterable<Uint8Array>) {
+      chunks.push(Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  } finally {
+    releaseSlot();
   }
-  return Buffer.concat(chunks);
 }

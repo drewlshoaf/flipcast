@@ -14,8 +14,19 @@ export const env = {
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   elevenlabsApiKey: process.env.ELEVENLABS_API_KEY ?? "",
+  elevenlabsMaxConcurrent: parsePositiveInt(
+    process.env.ELEVENLABS_MAX_CONCURRENT,
+    3,
+  ),
   defaultSpeed: parseSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
 };
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return n;
+}
 
 function parseSpeed(raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;

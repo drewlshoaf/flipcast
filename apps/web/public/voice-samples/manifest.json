@@ -1,18 +1,13 @@
 [
   {
-    "id": "el-lauren",
-    "label": "Lauren",
-    "url": "/voice-samples/el-lauren.mp3"
-  },
-  {
     "id": "el-jon",
     "label": "Jon",
     "url": "/voice-samples/el-jon.mp3"
   },
   {
-    "id": "el-elise",
-    "label": "Elise",
-    "url": "/voice-samples/el-elise.mp3"
+    "id": "el-lauren",
+    "label": "Lauren",
+    "url": "/voice-samples/el-lauren.mp3"
   },
   {
     "id": "el-michael",
@@ -20,23 +15,28 @@
     "url": "/voice-samples/el-michael.mp3"
   },
   {
-    "id": "el-josef",
-    "label": "Josef",
-    "url": "/voice-samples/el-josef.mp3"
+    "id": "el-maya",
+    "label": "Maya",
+    "url": "/voice-samples/el-maya.mp3"
   },
   {
-    "id": "el-jessica",
-    "label": "Jessica",
-    "url": "/voice-samples/el-jessica.mp3"
+    "id": "el-luna",
+    "label": "Luna",
+    "url": "/voice-samples/el-luna.mp3"
   },
   {
-    "id": "el-hans",
-    "label": "Hans",
-    "url": "/voice-samples/el-hans.mp3"
+    "id": "el-aiden",
+    "label": "Aiden",
+    "url": "/voice-samples/el-aiden.mp3"
   },
   {
-    "id": "el-chris",
-    "label": "Chris",
-    "url": "/voice-samples/el-chris.mp3"
+    "id": "el-princess",
+    "label": "Princess",
+    "url": "/voice-samples/el-princess.mp3"
+  },
+  {
+    "id": "el-wright",
+    "label": "Wright",
+    "url": "/voice-samples/el-wright.mp3"
   }
 ]

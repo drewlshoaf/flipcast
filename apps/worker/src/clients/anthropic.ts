@@ -460,7 +460,7 @@ export async function generateFullNewscast(args: {
       return `  Scene ${o.sceneIndex} — ${o.targetSeconds}s (~${targetWords} words total). ${
         isFinal
           ? "FINAL scene: wrap-up with closing thoughts and a sign-off. Do NOT end with a 'we'll be right back' transition."
-          : "Open with 'And we're back.' / 'Welcome back.' then deliver this beat. End with the moderator transitioning to an ad break ('we'll be right back...')."
+          : "Open with 'And we're back.' / 'Welcome back.' then deliver this beat. End with the moderator transitioning to an ad break ('we'll be right back after this short break' / 'stay with us'). NEVER specify how long the break or show is — no 'back in an hour', 'back in thirty minutes', 'see you next week', or any other time reference. The break is a few seconds; do not imply otherwise."
       }`;
     })
     .join("\n");
@@ -617,6 +617,7 @@ export async function generateScene(args: {
     : [
         `This is scene ${args.sceneIndex} of ${args.totalScenes} — about ${targetSeconds} seconds.`,
         "The final line of the scene MUST be the moderator delivering a brief, natural transition to an ad break — something equivalent to 'we'll be right back after this short break' or 'stay with us, more after the break'. Intentional, not abrupt.",
+        "NEVER specify how long the ad break or the show is — no 'back in an hour', 'back in thirty minutes', 'after a short commercial break of about a minute', 'see you next week', or any other time reference. The break is only a few seconds of audio; do not imply otherwise.",
       ].join(" ");
 
   // System prompt is split so the stable portion can be cached across scene calls

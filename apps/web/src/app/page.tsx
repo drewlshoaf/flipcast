@@ -1,10 +1,5 @@
-import { FlipcastPageClient } from "@/components/flipcast-page-client";
-import { env } from "@/lib/env";
+import { HomePage } from "@/components/home/home-page";
 
-export default function HomePage() {
-  return (
-    <main>
-      <FlipcastPageClient defaultSpeed={env.defaultSpeed} />
-    </main>
-  );
+export default function Page() {
+  return <HomePage />;
 }
