@@ -73,6 +73,12 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-flipcast}:${POSTGRES_PASSWORD:-flipcast}@postgres:5432/${POSTGRES_DB:-flipcast}
+    # Mount the live schema so `docker compose run --rm migrate` always
+    # reflects the current working-tree schema without needing a rebuild.
+    volumes:
+      - ./packages/server-db/src:/app/packages/server-db/src
+      - ./packages/server-db/drizzle.config.ts:/app/packages/server-db/drizzle.config.ts
+      - ./packages/types/src:/app/packages/types/src
     command: ["pnpm", "db:push"]
 
   web:
