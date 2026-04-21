@@ -28,6 +28,10 @@ interface EpisodeModalProps {
   onEnded: () => void;
   onError?: () => void;
   adminView?: boolean;
+  canSkipToNextScene?: boolean;
+  canSkipToEnd?: boolean;
+  onSkipToNextScene?: () => void;
+  onSkipToEnd?: () => void;
 }
 
 const AD_GRADIENTS: Record<AdAccent, { bg: string; chip: string; pill: string }> = {
@@ -78,6 +82,10 @@ export function EpisodeModal(props: EpisodeModalProps) {
     onEnded,
     onError,
     adminView,
+    canSkipToNextScene,
+    canSkipToEnd,
+    onSkipToNextScene,
+    onSkipToEnd,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -115,6 +123,15 @@ export function EpisodeModal(props: EpisodeModalProps) {
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  // When the flipcast finishes, auto-close after a brief "Done" beat so the
+  // user lands back in the Studio without having to click anything.
+  useEffect(() => {
+    if (!open) return;
+    if (stage !== "finished") return;
+    const t = setTimeout(onClose, 1200);
+    return () => clearTimeout(t);
+  }, [open, stage, onClose]);
 
   const isWaiting =
     stage === "waiting" || (!!currentItem && !currentSrc) || stage === "idle";
@@ -251,6 +268,39 @@ export function EpisodeModal(props: EpisodeModalProps) {
               )}
             </div>
           </div>
+
+          {/* Admin-only skip buttons. Only rendered when there's an actual
+              target to jump to. */}
+          {adminView && (canSkipToNextScene || canSkipToEnd) && (
+            <div className="flex flex-wrap gap-2">
+              {canSkipToNextScene && (
+                <button
+                  type="button"
+                  onClick={onSkipToNextScene}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 text-xs font-semibold text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:shadow-card"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
+                    <path d="M5 5v14l9-7-9-7z" fill="currentColor" />
+                    <rect x="16" y="5" width="2" height="14" fill="currentColor" />
+                  </svg>
+                  Skip to next scene
+                </button>
+              )}
+              {canSkipToEnd && (
+                <button
+                  type="button"
+                  onClick={onSkipToEnd}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 text-xs font-semibold text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:shadow-card"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
+                    <path d="M4 5v14l8-7-8-7z" fill="currentColor" />
+                    <path d="M12 5v14l8-7-8-7z" fill="currentColor" />
+                  </svg>
+                  Skip to end
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Now-playing panel */}
           <NowPlaying

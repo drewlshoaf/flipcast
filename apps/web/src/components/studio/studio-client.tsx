@@ -425,6 +425,54 @@ export function StudioClient({
 
   const hasStarted = Boolean(plan && requestId);
 
+  // Admin skip helpers. Find the next scene (and the final scene) in the
+  // plan so we can jump playback forward when their audio is ready.
+  function nextReadyScene(): number | null {
+    if (!plan) return null;
+    for (let i = playback.index + 1; i < plan.items.length; i++) {
+      const item = plan.items[i]!;
+      if (item.kind === "scene" && sceneUrls[item.sceneIndex]) return i;
+    }
+    return null;
+  }
+  function finalSceneIndex(): number | null {
+    if (!plan) return null;
+    for (let i = plan.items.length - 1; i >= 0; i--) {
+      const item = plan.items[i]!;
+      if (
+        item.kind === "scene" &&
+        item.isFinal &&
+        sceneUrls[item.sceneIndex]
+      )
+        return i;
+    }
+    return null;
+  }
+  const nextSceneIdx = nextReadyScene();
+  const finalSceneIdx = finalSceneIndex();
+  const canSkipToNextScene =
+    sessionUser?.isAdmin === true &&
+    hasStarted &&
+    playback.stage !== "finished" &&
+    nextSceneIdx != null;
+  const canSkipToEnd =
+    sessionUser?.isAdmin === true &&
+    hasStarted &&
+    playback.stage !== "finished" &&
+    finalSceneIdx != null &&
+    finalSceneIdx > playback.index &&
+    plan != null &&
+    Object.keys(sceneUrls).length === plan.totalScenes;
+
+  function skipToNextScene() {
+    if (nextSceneIdx == null) return;
+    setPlayback({ stage: "playing", index: nextSceneIdx });
+  }
+  function skipToEnd() {
+    if (finalSceneIdx == null) return;
+    setPlayback({ stage: "playing", index: finalSceneIdx });
+  }
+
   const currentItem =
     plan && (playback.stage === "playing" || playback.stage === "waiting")
       ? plan.items[playback.index] ?? null
@@ -968,6 +1016,10 @@ export function StudioClient({
         onEnded={handleTrackEnded}
         onError={handleTrackEnded}
         adminView={sessionUser?.isAdmin ?? false}
+        canSkipToNextScene={canSkipToNextScene}
+        canSkipToEnd={canSkipToEnd}
+        onSkipToNextScene={skipToNextScene}
+        onSkipToEnd={skipToEnd}
       />
 
       {toast && (
