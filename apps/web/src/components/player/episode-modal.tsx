@@ -7,6 +7,8 @@ import {
   type Character,
   type SequenceItem,
   type SequencePlan,
+  type SpeakerRole,
+  type TranscriptTurn,
 } from "@flipcast/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 
@@ -22,6 +24,7 @@ interface EpisodeModalProps {
   currentItem: SequenceItem | null;
   currentSrc: string | null;
   characters: Character[] | null;
+  sceneTurns: Record<number, TranscriptTurn[]>;
   onEnded: () => void;
 }
 
@@ -69,6 +72,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
     currentItem,
     currentSrc,
     characters,
+    sceneTurns,
     onEnded,
   } = props;
 
@@ -120,6 +124,31 @@ export function EpisodeModal(props: EpisodeModalProps) {
     const pct = ((playbackIndex + within) / total) * 100;
     return Math.max(0, Math.min(100, pct));
   }, [plan, isFinished, duration, currentTime, playbackIndex]);
+
+  // Which character is speaking right now.
+  // - Welcome segment: always the moderator (single voice, single block).
+  // - Scene: estimate by mapping the audio's currentTime/duration fraction
+  //   to a cumulative character-length across the scene's turns. Rough but
+  //   good enough without real per-turn timestamps.
+  // - Other items (station intro, ad, pre-cast): no one in the cast is
+  //   speaking, so we return null and no card gets the indicator.
+  const currentSpeaker = useMemo<SpeakerRole | null>(() => {
+    if (!currentItem) return null;
+    if (currentItem.kind === "welcome") return "moderator";
+    if (currentItem.kind !== "scene") return null;
+    const turns = sceneTurns[currentItem.sceneIndex] ?? [];
+    if (turns.length === 0) return null;
+    if (duration <= 0) return turns[0]?.speaker ?? null;
+    const totalChars = turns.reduce((s, t) => s + t.text.length, 0);
+    if (totalChars === 0) return turns[0]?.speaker ?? null;
+    const frac = currentTime / duration;
+    let acc = 0;
+    for (const t of turns) {
+      acc += t.text.length / totalChars;
+      if (frac <= acc) return t.speaker;
+    }
+    return turns[turns.length - 1]?.speaker ?? null;
+  }, [currentItem, currentTime, duration, sceneTurns]);
 
   if (!open) return null;
 
@@ -216,6 +245,8 @@ export function EpisodeModal(props: EpisodeModalProps) {
             item={currentItem}
             totalAds={plan?.totalAds ?? 0}
             characters={characters}
+            currentSpeaker={currentSpeaker}
+            paused={paused}
           />
 
           {/* Always-visible promo box */}
@@ -243,18 +274,36 @@ function NowPlaying({
   item,
   totalAds,
   characters,
+  currentSpeaker,
+  paused,
 }: {
   item: SequenceItem | null;
   totalAds: number;
   characters: Character[] | null;
+  currentSpeaker: SpeakerRole | null;
+  paused: boolean;
 }) {
   if (item && item.kind === "ad") {
     return <AdPanel slotIndex={item.adIndex} totalAds={totalAds} />;
   }
-  return <CastPanel characters={characters} />;
+  return (
+    <CastPanel
+      characters={characters}
+      currentSpeaker={currentSpeaker}
+      paused={paused}
+    />
+  );
 }
 
-function CastPanel({ characters }: { characters: Character[] | null }) {
+function CastPanel({
+  characters,
+  currentSpeaker,
+  paused,
+}: {
+  characters: Character[] | null;
+  currentSpeaker: SpeakerRole | null;
+  paused: boolean;
+}) {
   if (!characters || characters.length === 0) {
     return (
       <div className="rounded-3xl bg-white/60 p-5 text-sm italic text-ink-400 ring-1 ring-slate-200/70">
@@ -268,31 +317,54 @@ function CastPanel({ characters }: { characters: Character[] | null }) {
         Cast
       </div>
       <div className="grid grid-cols-1 gap-2">
-        {characters.map((c) => (
-          <div
-            key={c.role}
-            className="rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/70"
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-ink-900">
-                {c.name}
-              </span>
-              <span
-                className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${
-                  c.role === "moderator" ? "text-pink-600" : "text-sky-600"
-                }`}
-              >
-                {c.role === "moderator" ? "Moderator" : "Panelist"}
-              </span>
-              <span className="ml-auto text-[11px] text-ink-400">
-                {c.voiceLabel}
-              </span>
+        {characters.map((c) => {
+          const isSpeaking = c.role === currentSpeaker;
+          return (
+            <div
+              key={c.role}
+              className={`rounded-2xl p-3 ring-1 transition ${
+                isSpeaking
+                  ? "bg-pink-50/70 ring-2 ring-pink-300 shadow-card"
+                  : "bg-white/70 ring-slate-200/70"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-ink-900">
+                  {c.name}
+                </span>
+                <span
+                  className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                    c.role === "moderator" ? "text-pink-600" : "text-sky-600"
+                  }`}
+                >
+                  {c.role === "moderator" ? "Moderator" : "Panelist"}
+                </span>
+                {isSpeaking ? (
+                  <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-pink-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
+                    <span
+                      className={`grid h-3 w-3 place-items-center rounded-full bg-white/25 ${
+                        paused ? "" : "animate-pulse-soft"
+                      }`}
+                      aria-hidden
+                    >
+                      <svg width="6" height="6" viewBox="0 0 24 24">
+                        <path d="M7 5v14l12-7-12-7z" fill="white" />
+                      </svg>
+                    </span>
+                    Speaking
+                  </span>
+                ) : (
+                  <span className="ml-auto text-[11px] text-ink-400">
+                    {c.voiceLabel}
+                  </span>
+                )}
+              </div>
+              {c.bio && (
+                <div className="mt-1 text-xs italic text-ink-500">{c.bio}</div>
+              )}
             </div>
-            {c.bio && (
-              <div className="mt-1 text-xs italic text-ink-500">{c.bio}</div>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

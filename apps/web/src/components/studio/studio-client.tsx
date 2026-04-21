@@ -900,6 +900,7 @@ export function StudioClient({
         currentItem={currentItem ?? null}
         currentSrc={currentSrc}
         characters={characters}
+        sceneTurns={sceneTurns}
         onEnded={handleTrackEnded}
       />
 
