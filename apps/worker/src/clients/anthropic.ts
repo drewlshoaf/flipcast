@@ -21,22 +21,33 @@ const NEWSCAST_MODEL = "claude-sonnet-4-6";
 const SCENE_MODEL = "claude-sonnet-4-6";
 
 // Fish Audio S2 Pro accepts inline bracketed direction tags that shape
-// delivery. We're keeping guidance conservative for now — pacing + breath
-// only, no emotion/laughter/volume tags. Reused across every prompt that
-// produces spoken text.
+// delivery. The synth reads tags as performance cues, not speech, so
+// they never land as literal audio. Reused across every prompt that
+// produces spoken text so the welcome, every scene, and the solo newscast
+// all get the same vocabulary.
 const FISH_TAG_GUIDANCE = [
   "",
-  "— PACING (Fish Audio S2 Pro inline tags) —",
-  "Place bracketed pacing tags inside the spoken text to shape delivery. The synth reads tags as performance cues, not speech, so they never land as literal audio.",
-  "Vocabulary (use ONLY these — do not invent others):",
-  "  [short pause]  — comma-level beat, mid-sentence",
-  "  [long pause]   — dramatic beat between ideas or before a punchline",
-  "  [breath]       — an audible inhale at a natural place",
-  "Rules:",
-  "  1. Use sparingly — 0–2 tags per turn. Most turns should have zero. Overuse makes delivery feel robotic.",
-  "  2. Place tags at natural breath points: between clauses, before a reveal, after a hard stop. Not inside a single clause.",
-  "  3. Lowercase and exact spelling matter. Stick to the three tags above.",
-  "  4. No emotion/laughter/volume tags (no [excited], [laughing], [whisper], etc.) — we'll enable those later.",
+  "— VOICE DIRECTION (Fish Audio S2 Pro inline tags) —",
+  "Place bracketed performance tags inside the spoken text. Tags affect the phrase around them, not the whole turn, so drop them where the performance should change. Lowercase, spelled exactly.",
+  "",
+  "RELIABLE PRESETS (use these first — officially supported):",
+  "  Pauses & timing: [pause], [short pause]",
+  "  Breath & vocals: [inhale], [exhale], [sigh], [panting], [clearing throat], [tsk]",
+  "  Laughter: [laughing], [laughing tone], [chuckle], [chuckling], [audience laughter]",
+  "  Emotions: [excited], [excited tone], [angry], [sad], [delight], [surprised], [shocked]",
+  "  Volume & quality: [whisper], [low voice], [low volume], [loud], [shouting], [screaming], [volume up], [volume down], [echo]",
+  "  Delivery: [emphasis], [singing], [interrupting], [with strong accent]",
+  "",
+  "FREE-FORM (also work in practice — use when a preset doesn't fit):",
+  "  Pauses: [gasp], [long pause], [beat], [slight pause], [sharp inhale], [startled gasp], [deep breath], [slightly out of breath]",
+  "  Emotional nuance: [nervous], [scared], [confident], [sarcastic], [curious], [disappointed], [relieved], [hopeful], [annoyed], [disgusted], [mysterious], [proud]",
+  "  Delivery style: [whisper in small voice], [whispers sweetly], [laughing nervously], [professional broadcast tone], [newscaster style], [narrator], [pitch up], [pitch down], [slow], [fast], [dramatic], [monotone]",
+  "",
+  "RULES:",
+  "  1. One or two tags per turn is usually enough. At most three stacked (e.g. `[whisper][nervous]`). More than that and delivery gets muddy.",
+  "  2. Not every turn needs a tag. Use them where they meaningfully change delivery; let plain lines stay plain. Punctuation (commas, em-dashes, ellipses) already shapes pacing.",
+  "  3. Match tags to the vibe — sincere stays restrained, playful leans into [laughing] / [delight] / [chuckle], curious reaches for [curious] / [mysterious], relaxed uses [sigh] / [slow] / [chuckle] sparingly.",
+  "  4. Exact spelling matters: `[laughing]` and `[laugh]` are NOT the same tag. Stick to the vocabulary above or use a plain natural-language phrase in brackets if you need something specific.",
   "  5. Never use the multi-speaker syntax `<|speaker:N|>` — each turn is synthesized on its own voice.",
   "  6. Do NOT tag the verbatim ad-break transition line or the verbatim sign-off line. Leave those clean.",
 ].join("\n");
