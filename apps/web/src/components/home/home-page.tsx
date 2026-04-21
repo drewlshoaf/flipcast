@@ -122,9 +122,8 @@ export function HomePage({ sessionUser }: HomePageProps) {
           <span className="chip chip-pink mb-5">
             New · personalized, on-demand podcast
           </span>
-          <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight text-ink-900 md:text-6xl">
-            You pick
-            <br />
+          <h1 className="whitespace-nowrap text-4xl font-semibold leading-[1.02] tracking-tight text-ink-900 md:text-5xl">
+            You pick{" "}
             <span className="bg-brand-gradient bg-clip-text text-transparent">
               the show
             </span>
