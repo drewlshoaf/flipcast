@@ -120,7 +120,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
       <section className="mb-16 grid grid-cols-1 items-stretch gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div>
           <span className="chip chip-pink mb-5">
-            New · personalized, on-demand podcast
+            the world first · personalized, on-demand podcast
           </span>
           <h1 className="whitespace-nowrap text-4xl font-semibold leading-[1.02] tracking-tight text-ink-900 md:text-5xl">
             You pick{" "}
