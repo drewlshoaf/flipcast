@@ -114,16 +114,6 @@ export function EpisodeModal(props: EpisodeModalProps) {
     };
   }, [open]);
 
-  // Esc to close — feels right for a modal.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
   const isWaiting =
     stage === "waiting" || (!!currentItem && !currentSrc) || stage === "idle";
   const isFinished = stage === "finished";
@@ -142,29 +132,28 @@ export function EpisodeModal(props: EpisodeModalProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink-900/60 p-4 backdrop-blur-md"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
       role="dialog"
       aria-modal="true"
     >
       <div className="glass relative flex max-h-[92vh] w-full max-w-[560px] flex-col overflow-hidden rounded-[32px] shadow-cardHover">
-        {/* Close */}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close player"
-          className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:shadow-card"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
-            <path
-              d="M6 6l12 12M18 6L6 18"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        {/* Close — only available once the episode has finished playing. */}
+        {isFinished && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close player"
+            className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/80 text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:shadow-card"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden>
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
 
         {/* Scroll body */}
         <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-7">
