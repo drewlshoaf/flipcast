@@ -25,6 +25,10 @@ interface EpisodeModalProps {
   currentSrc: string | null;
   characters: Character[] | null;
   sceneTurns: Record<number, TranscriptTurn[]>;
+  // URLs of the ads in the order they'll be played. Used by the ad card +
+  // promo code so the visual matches the audio rather than the old
+  // deterministic slot→ad-{i+1} guess.
+  adRotation: string[] | null;
   onEnded: () => void;
   onError?: () => void;
   adminView?: boolean;
@@ -32,6 +36,25 @@ interface EpisodeModalProps {
   canSkipToEnd?: boolean;
   onSkipToNextScene?: () => void;
   onSkipToEnd?: () => void;
+}
+
+// Resolve the ad metadata for a given plan ad-slot index. Prefers the live
+// rotation that's actually playing; falls back to the deterministic
+// slot→ad-{i+1} mapping if rotation hasn't arrived yet (matches
+// srcForItem's fallback so visual == audio).
+function resolveAdForSlot(
+  slotIndex: number,
+  rotation: string[] | null,
+): ReturnType<typeof AD_BY_INDEX.get> {
+  let adNumber: number;
+  if (rotation && rotation.length > 0) {
+    const url = rotation[slotIndex % rotation.length] ?? "";
+    const match = url.match(/ad-(\d+)\.mp3/);
+    adNumber = match ? Number(match[1]) : (slotIndex % 6) + 1;
+  } else {
+    adNumber = (slotIndex % 6) + 1;
+  }
+  return AD_BY_INDEX.get(adNumber);
 }
 
 const AD_GRADIENTS: Record<AdAccent, { bg: string; chip: string; pill: string }> = {
@@ -79,6 +102,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
     currentSrc,
     characters,
     sceneTurns,
+    adRotation,
     onEnded,
     onError,
     adminView,
@@ -150,9 +174,9 @@ export function EpisodeModal(props: EpisodeModalProps) {
   // below can auto-fill its input with it.
   const currentPromoCode = useMemo<string | null>(() => {
     if (!currentItem || currentItem.kind !== "ad") return null;
-    const ad = AD_BY_INDEX.get((currentItem.adIndex % 6) + 1);
+    const ad = resolveAdForSlot(currentItem.adIndex, adRotation);
     return ad?.promoCode ?? null;
-  }, [currentItem]);
+  }, [currentItem, adRotation]);
 
   // Which character is speaking right now.
   // - Welcome segment: always the moderator (single voice, single block).
@@ -309,7 +333,18 @@ export function EpisodeModal(props: EpisodeModalProps) {
             characters={characters}
             currentSpeaker={currentSpeaker}
             paused={paused}
+            adRotation={adRotation}
           />
+
+          {/* Admin-only: full transcript with the active turn highlighted. */}
+          {adminView && (
+            <TranscriptPanel
+              sceneTurns={sceneTurns}
+              characters={characters}
+              currentItem={currentItem}
+              currentSpeaker={currentSpeaker}
+            />
+          )}
 
           {/* Always-visible promo box. Auto-fills with the current ad's code
               while an ad is playing. */}
@@ -341,15 +376,23 @@ function NowPlaying({
   characters,
   currentSpeaker,
   paused,
+  adRotation,
 }: {
   item: SequenceItem | null;
   totalAds: number;
   characters: Character[] | null;
   currentSpeaker: SpeakerRole | null;
   paused: boolean;
+  adRotation: string[] | null;
 }) {
   if (item && item.kind === "ad") {
-    return <AdPanel slotIndex={item.adIndex} totalAds={totalAds} />;
+    return (
+      <AdPanel
+        slotIndex={item.adIndex}
+        totalAds={totalAds}
+        adRotation={adRotation}
+      />
+    );
   }
   return (
     <CastPanel
@@ -438,13 +481,15 @@ function CastPanel({
 function AdPanel({
   slotIndex,
   totalAds,
+  adRotation,
 }: {
   slotIndex: number;
   totalAds: number;
+  adRotation: string[] | null;
 }) {
-  // Deterministic mapping: slot i → ad-{i+1}. Matches the fallback the player
-  // uses when /api/ads/rotation hasn't answered yet.
-  const ad = AD_BY_INDEX.get((slotIndex % 6) + 1);
+  // Resolve the ad that's *actually* being played at this slot so the card
+  // and promo code match the audio.
+  const ad = resolveAdForSlot(slotIndex, adRotation);
   if (!ad) return null;
   const palette = AD_GRADIENTS[ad.accent];
 
@@ -486,3 +531,97 @@ function AdPanel({
   );
 }
 
+// Admin-only transcript rail. Shows the current scene's turns (or all scenes
+// collapsed when no scene is active) with the current speaker highlighted.
+// Tags like [excited] are preserved inline so admins can debug the markup.
+function TranscriptPanel({
+  sceneTurns,
+  characters,
+  currentItem,
+  currentSpeaker,
+}: {
+  sceneTurns: Record<number, TranscriptTurn[]>;
+  characters: Character[] | null;
+  currentItem: SequenceItem | null;
+  currentSpeaker: SpeakerRole | null;
+}) {
+  const activeRef = useRef<HTMLDivElement | null>(null);
+  const currentSceneIndex =
+    currentItem && currentItem.kind === "scene"
+      ? currentItem.sceneIndex
+      : null;
+
+  const sceneKeys = Object.keys(sceneTurns)
+    .map((k) => Number(k))
+    .sort((a, b) => a - b);
+  if (sceneKeys.length === 0) return null;
+
+  // Auto-scroll the active turn into view when the speaker changes.
+  useEffect(() => {
+    if (activeRef.current) {
+      activeRef.current.scrollIntoView({
+        block: "nearest",
+        behavior: "smooth",
+      });
+    }
+  }, [currentSpeaker, currentSceneIndex]);
+
+  const characterByRole = new Map(
+    (characters ?? []).map((c) => [c.role, c] as const),
+  );
+
+  return (
+    <section className="rounded-3xl bg-white/70 p-4 ring-1 ring-slate-200/70">
+      <div className="mb-2 flex items-center gap-2">
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+          Transcript
+        </h3>
+        <span className="chip chip-pink text-[10px]">admin</span>
+      </div>
+      <div className="max-h-64 overflow-y-auto pr-1">
+        {sceneKeys.map((idx) => {
+          const turns = sceneTurns[idx] ?? [];
+          const isActiveScene = idx === currentSceneIndex;
+          return (
+            <div key={idx} className="mb-3 last:mb-0">
+              <div
+                className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                  isActiveScene ? "text-sky-600" : "text-ink-400"
+                }`}
+              >
+                Scene {idx}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {turns.map((t) => {
+                  const char = characterByRole.get(t.speaker);
+                  const isActive =
+                    isActiveScene && t.speaker === currentSpeaker;
+                  return (
+                    <div
+                      key={t.sequence}
+                      ref={isActive ? activeRef : null}
+                      className={`rounded-xl px-3 py-2 text-xs leading-snug transition ${
+                        isActive
+                          ? "bg-brand-gradient-soft text-ink-900 ring-1 ring-sky-200"
+                          : "bg-white/60 text-ink-700 ring-1 ring-slate-200/70"
+                      }`}
+                    >
+                      <div
+                        className={`mb-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${
+                          isActive ? "text-pink-600" : "text-ink-400"
+                        }`}
+                      >
+                        {char ? char.name : t.speaker}
+                      </div>
+                      <div>{t.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

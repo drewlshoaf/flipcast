@@ -929,6 +929,7 @@ export function StudioClient({
         currentSrc={currentSrc}
         characters={characters}
         sceneTurns={sceneTurns}
+        adRotation={adRotation}
         onEnded={handleTrackEnded}
         onError={handleTrackEnded}
         adminView={sessionUser?.isAdmin ?? false}

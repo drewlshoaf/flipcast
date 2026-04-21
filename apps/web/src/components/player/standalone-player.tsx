@@ -60,9 +60,21 @@ const FORMAT_LABEL: Record<string, string> = {
 
 interface Props {
   requestId: string;
+  isAdmin?: boolean;
 }
 
-export function StandalonePlayer({ requestId }: Props) {
+interface TranscriptTurnMini {
+  sequence: number;
+  speaker: string;
+  text: string;
+}
+interface TranscriptCharacter {
+  role: string;
+  name: string;
+  voiceLabel?: string;
+}
+
+export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
   const [row, setRow] = useState<FlipcastRow | null>(null);
   const [plan, setPlan] = useState<SequencePlan | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
@@ -71,6 +83,12 @@ export function StandalonePlayer({ requestId }: Props) {
   const [stage, setStage] = useState<Stage>("loading");
   const [index, setIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [sceneTurns, setSceneTurns] = useState<
+    Record<number, TranscriptTurnMini[]>
+  >({});
+  const [characters, setCharacters] = useState<TranscriptCharacter[] | null>(
+    null,
+  );
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -119,6 +137,33 @@ export function StandalonePlayer({ requestId }: Props) {
       cancelled = true;
     };
   }, [requestId]);
+
+  // Admin-only: load scene turns + characters for the transcript rail.
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    async function loadTranscript() {
+      try {
+        const res = await fetch(`/api/flipcasts/${requestId}/transcript`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          sceneTurns?: Record<number, TranscriptTurnMini[]>;
+          characters?: TranscriptCharacter[] | null;
+        };
+        if (cancelled) return;
+        if (data.sceneTurns) setSceneTurns(data.sceneTurns);
+        if (data.characters) setCharacters(data.characters);
+      } catch {
+        /* transcript is a nice-to-have; ignore fetch errors */
+      }
+    }
+    void loadTranscript();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, requestId]);
 
   // Fresh ad rotation per playback (interest-targeted if signed in).
   useEffect(() => {
@@ -491,6 +536,49 @@ export function StandalonePlayer({ requestId }: Props) {
               </ol>
             </div>
           </section>
+
+          {isAdmin && Object.keys(sceneTurns).length > 0 && (
+            <section className="mt-6 glass rounded-[32px] p-6 shadow-card">
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold tracking-tight text-ink-900">
+                  Transcript
+                </h3>
+                <span className="chip chip-pink text-[10px]">admin</span>
+              </div>
+              <div className="flex flex-col gap-5">
+                {Object.keys(sceneTurns)
+                  .map((k) => Number(k))
+                  .sort((a, b) => a - b)
+                  .map((idx) => {
+                    const turns = sceneTurns[idx] ?? [];
+                    const nameFor = (role: string) =>
+                      characters?.find((c) => c.role === role)?.name ?? role;
+                    return (
+                      <div key={idx}>
+                        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-600">
+                          Scene {idx}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {turns.map((t) => (
+                            <div
+                              key={t.sequence}
+                              className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70"
+                            >
+                              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-pink-600">
+                                {nameFor(t.speaker)}
+                              </div>
+                              <div className="text-sm leading-relaxed text-ink-700">
+                                {t.text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </section>
+          )}
 
           <footer className="mt-auto pt-10 text-center text-xs text-ink-400">
             flip.audio — on-demand podcasts. Keep this tab open to keep listening.
