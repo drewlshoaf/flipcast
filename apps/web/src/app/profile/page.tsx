@@ -37,7 +37,7 @@ export default async function ProfilePage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flip.audio
+            flip.audio
           </span>
         </Link>
         <UserChip user={sessionUser} />
@@ -47,7 +47,7 @@ export default async function ProfilePage() {
         Profile
       </h1>
       <p className="mt-1 text-base text-ink-500">
-        How you show up across Flip.audio.
+        How you show up across flip.audio.
       </p>
 
       <div className="mt-8 flex flex-col gap-6">

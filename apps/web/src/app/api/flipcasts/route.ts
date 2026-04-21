@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   const userId = session?.user?.id ?? null;
   if (!userId) {
     return NextResponse.json(
-      { error: "Sign in to create a Flip.audio." },
+      { error: "Sign in to create a flip.audio." },
       { status: 401 },
     );
   }

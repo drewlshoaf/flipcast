@@ -18,7 +18,7 @@ export function AuthShell({ title, subtitle, footer, children }: Props) {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flip.audio
+            flip.audio
           </span>
         </Link>
       </header>

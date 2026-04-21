@@ -19,7 +19,7 @@ interface ForMePayload {
 const FOR_ME_TOOL = {
   name: "emit_for_me",
   description:
-    "Emit Flip.audio topic ideas tuned to a user's selected interests.",
+    "Emit flip.audio topic ideas tuned to a user's selected interests.",
   input_schema: {
     type: "object",
     properties: {
@@ -83,7 +83,7 @@ export async function GET() {
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     system: [
-      "You generate Flip.audio topic ideas tailored to a specific user's interests.",
+      "You generate flip.audio topic ideas tailored to a specific user's interests.",
       "Each idea must be 8-14 words and read as a concrete, opinionated podcast prompt the user could submit directly.",
       "Vary the topics across the user's interests (don't pile them all into one). Be specific and slightly provocative; avoid generic 'how X is changing the world' phrasing.",
       "Emit strictly via the `emit_for_me` tool.",

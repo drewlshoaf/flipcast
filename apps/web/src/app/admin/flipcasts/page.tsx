@@ -28,7 +28,7 @@ import {
 } from "@/components/admin/flipcasts-table";
 
 const STATION_INTRO_TEXT =
-  "Thanks for choosing Flip.audio. We're assembling your Flip.audio and will be with you shortly — right after these short ads.";
+  "Thanks for choosing flip.audio. We're assembling your flip.audio and will be with you shortly — right after these short ads.";
 
 export default async function AdminFlipcastsPage() {
   const session = await requireAdmin();
@@ -210,7 +210,7 @@ export default async function AdminFlipcastsPage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flip.audio · Admin
+            flip.audio · Admin
           </span>
         </Link>
         <UserChip user={sessionUser} />

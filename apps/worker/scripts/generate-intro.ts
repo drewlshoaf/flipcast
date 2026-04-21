@@ -5,10 +5,10 @@ import { synthesizeSegment } from "../src/clients/tts";
 
 const OUT_DIR = "/app/apps/web/public/station";
 
-// Branded station intro — played before the first ad on every Flip.audio.
+// Branded station intro — played before the first ad on every flip.audio.
 const INTRO_VOICE_ID = "fa-paula";
 const INTRO_TEXT =
-  "Thanks for choosing Flip.audio. We're assembling your Flip.audio and will be with you shortly — right after these short ads.";
+  "Thanks for choosing flip.audio. We're assembling your flip.audio and will be with you shortly — right after these short ads.";
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

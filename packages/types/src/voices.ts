@@ -192,7 +192,7 @@ export interface SequencePlan {
   estimatedSeconds: number;
 }
 
-/** Fixed Flip.audio playback sequence — never plays 3 ads in a row:
+/** Fixed flip.audio playback sequence — never plays 3 ads in a row:
  *   station_intro (~10s) → ad (25s) → ad (25s) → welcome (~30s)
  *   → ad (25s) → scene 1 (120s) → ad (25s) → scene 2 (120s)
  *   → ad (25s) → scene 3 (60s, final)

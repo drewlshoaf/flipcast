@@ -453,7 +453,7 @@ export async function runPipeline(requestId: string): Promise<void> {
       })
       .where(eq(flipcastRequests.id, requestId));
 
-    await emit("complete", requestId, { message: "Flip.audio ready." });
+    await emit("complete", requestId, { message: "flip.audio ready." });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     await db

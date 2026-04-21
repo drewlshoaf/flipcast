@@ -72,7 +72,7 @@ const EXPLAINERS = [
   },
   {
     label: "Made for you",
-    body: "Every Flip.audio is produced on demand, about what you said.",
+    body: "Every flip.audio is produced on demand, about what you said.",
     chip: "chip-slate",
   },
 ];
@@ -107,7 +107,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
             </svg>
           </span>
           <span className="text-lg font-semibold tracking-tight text-ink-900">
-            Flip.audio
+            flip.audio
           </span>
         </div>
         <div className="flex items-center gap-3">
@@ -138,14 +138,14 @@ export function HomePage({ sessionUser }: HomePageProps) {
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-500">
             The podcast doesn't exist until you ask for it. Drop a topic — a
             headline, a hot take, something you can't stop thinking about — and
-            Flip.audio produces a ~7 minute episode you can play right now.
+            flip.audio produces a ~7 minute episode you can play right now.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
               href={studioHref()}
               className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              Start a Flip.audio
+              Start a flip.audio
             </Link>
             <Link
               href={studioHref()}
@@ -259,7 +259,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
             Go from idea to episode.
           </h2>
           <p className="mt-2 text-base text-ink-500">
-            Four ways Flip.audio is built for fast, joyful creation.
+            Four ways flip.audio is built for fast, joyful creation.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -293,14 +293,14 @@ export function HomePage({ sessionUser }: HomePageProps) {
               href={studioHref()}
               className="inline-flex h-14 items-center rounded-full bg-brand-gradient px-8 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              Start a Flip.audio
+              Start a flip.audio
             </Link>
           </div>
         </div>
       </section>
 
       <footer className="border-t border-slate-200/70 pt-6 text-xs text-ink-400">
-        <span>Flip.audio — on-demand podcasts, one topic at a time.</span>
+        <span>flip.audio — on-demand podcasts, one topic at a time.</span>
       </footer>
     </div>
   );

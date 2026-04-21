@@ -290,7 +290,7 @@ export function StandalonePlayer({ requestId }: Props) {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flip.audio
+            flip.audio
           </span>
         </Link>
         <Link
@@ -493,7 +493,7 @@ export function StandalonePlayer({ requestId }: Props) {
           </section>
 
           <footer className="mt-auto pt-10 text-center text-xs text-ink-400">
-            Flip.audio — on-demand podcasts. Keep this tab open to keep listening.
+            flip.audio — on-demand podcasts. Keep this tab open to keep listening.
           </footer>
         </main>
       )}

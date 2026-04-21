@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Flip.audio — make the podcast first",
+  title: "flip.audio — make the podcast first",
   description:
     "The world's first personalized on-demand podcast. Pick a topic, a format, and a vibe — we produce the rest.",
 };

@@ -71,7 +71,7 @@ export default async function LibraryPage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flip.audio
+            flip.audio
           </span>
         </Link>
         <UserChip user={sessionUser} />
@@ -83,7 +83,7 @@ export default async function LibraryPage() {
             Your library
           </h1>
           <p className="mt-1 text-base text-ink-500">
-            Every Flip.audio you've made.
+            Every flip.audio you've made.
           </p>
         </div>
         <Link

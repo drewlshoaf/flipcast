@@ -523,7 +523,7 @@ export function StudioClient({
           </Link>
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-ink-900">
-              Flip.audio Studio
+              flip.audio Studio
             </h1>
             <p className="text-xs text-ink-400">
               Topic → format → vibe → listen.
@@ -737,7 +737,7 @@ export function StudioClient({
               ? "Starting up…"
               : hasStarted
                 ? "Generating…"
-                : "Generate Flip.audio"}
+                : "Generate flip.audio"}
           </button>
 
           {/* Error */}
@@ -877,12 +877,15 @@ export function StudioClient({
             </section>
           )}
 
-          {/* Transcript */}
-          {Object.keys(sceneTurns).length > 0 && (
+          {/* Transcript — admin-only while we iterate on copy/markup. */}
+          {sessionUser?.isAdmin && Object.keys(sceneTurns).length > 0 && (
             <section>
-              <h3 className="mb-3 text-lg font-semibold tracking-tight text-ink-900">
-                Transcript
-              </h3>
+              <div className="mb-3 flex items-center gap-2">
+                <h3 className="text-lg font-semibold tracking-tight text-ink-900">
+                  Transcript
+                </h3>
+                <span className="chip chip-pink">admin</span>
+              </div>
               <div className="flex flex-col gap-5">
                 {Object.keys(sceneTurns)
                   .map((k) => Number(k))

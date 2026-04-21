@@ -23,7 +23,7 @@ declare global {
 
 const IDEAS_TOOL = {
   name: "emit_ideas",
-  description: "Emit Flip.audio topic ideas across three categories.",
+  description: "Emit flip.audio topic ideas across three categories.",
   input_schema: {
     type: "object",
     properties: {
@@ -57,8 +57,8 @@ async function generateIdeas(): Promise<IdeasPayload> {
 
   const client = new Anthropic({ apiKey: env.anthropicApiKey });
   const system = [
-    "You generate fresh podcast topic ideas for Flip.audio, a personalized on-demand podcast.",
-    "Output 6 ideas per category, each 8-14 words, written as concrete Flip.audio prompts a user could submit directly.",
+    "You generate fresh podcast topic ideas for flip.audio, a personalized on-demand podcast.",
+    "Output 6 ideas per category, each 8-14 words, written as concrete flip.audio prompts a user could submit directly.",
     "Vary widely across runs — don't repeat obvious topics. Be specific, opinionated, and slightly provocative.",
     "Emit strictly via the `emit_ideas` tool.",
   ].join(" ");
@@ -72,7 +72,7 @@ async function generateIdeas(): Promise<IdeasPayload> {
     messages: [
       {
         role: "user",
-        content: `Generate six topic ideas for each of the three Flip.audio categories: today's news, learn about, talk about. Timestamp: ${new Date().toISOString()}.`,
+        content: `Generate six topic ideas for each of the three flip.audio categories: today's news, learn about, talk about. Timestamp: ${new Date().toISOString()}.`,
       },
     ],
   });

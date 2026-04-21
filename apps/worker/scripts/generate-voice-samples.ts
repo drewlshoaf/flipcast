@@ -6,7 +6,7 @@ import { synthesizeSegment } from "../src/clients/tts";
 const OUT_DIR = "/app/apps/web/public/voice-samples";
 
 const SAMPLE_SCRIPT = (name: string) =>
-  `Hi, I'm ${name}. This is what I sound like when I'm hosting a Flip.audio.`;
+  `Hi, I'm ${name}. This is what I sound like when I'm hosting a flip.audio.`;
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

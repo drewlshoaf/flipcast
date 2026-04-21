@@ -20,6 +20,29 @@ const SETUP_MODEL = "claude-sonnet-4-6";
 const NEWSCAST_MODEL = "claude-sonnet-4-6";
 const SCENE_MODEL = "claude-sonnet-4-6";
 
+// Fish Audio S2 Pro accepts inline bracketed direction tags that shape delivery.
+// The synth reads these as performance cues — not speech — so tags never land as
+// literal audio. Reused across every prompt that produces spoken text.
+const FISH_TAG_GUIDANCE = [
+  "",
+  "— VOICE DIRECTION (Fish Audio S2 Pro inline tags) —",
+  "Place bracketed performance tags inside the spoken text to shape delivery. Tags affect the phrase around them, not the whole turn, so drop them where the performance should change.",
+  "Core vocabulary (use these first):",
+  "  Pauses: [pause], [short pause]",
+  "  Breath: [inhale], [exhale], [sigh], [clearing throat]",
+  "  Laughter: [laughing], [chuckle], [chuckling]",
+  "  Emotions: [excited], [angry], [sad], [delight], [surprised], [shocked]",
+  "  Volume: [whisper], [low voice], [loud], [emphasis]",
+  "Also fine, when they fit the moment: [gasp], [long pause], [nervous], [scared], [confident], [sarcastic], [curious], [disappointed], [relieved], [hopeful], [annoyed], [dramatic], [monotone], [slow], [fast], [pitch up], [pitch down].",
+  "Rules:",
+  "  1. One tag per turn is typical; at most two when stacking (e.g. `[whisper][nervous]`). More than that and delivery gets muddy.",
+  "  2. Not every turn needs a tag. Use them where they meaningfully change delivery; let plain lines stay plain.",
+  "  3. Match tags to the vibe — serious stays restrained, playful uses more laughter / delight, dramatic leans on [gasp] / [whisper] / [shocked] / [dramatic].",
+  "  4. Lowercase and exact spelling matter: `[laughing]` and `[laugh]` are NOT the same tag. Stick to the vocabulary above.",
+  "  5. Never use the multi-speaker syntax `<|speaker:N|>` — each turn is synthesized on its own voice.",
+  "  6. Do NOT tag the verbatim ad-break transition line or the verbatim sign-off line. Leave those clean.",
+].join("\n");
+
 const ZERO_USAGE: ClaudeCallUsage = {
   inputTokens: 0,
   outputTokens: 0,
@@ -179,7 +202,7 @@ const FULL_NEWSCAST_TOOL = {
       welcomeText: {
         type: "string",
         description:
-          "The host's opening words right after the station intro and first ads. ~75 words. Frame the topic with real context (3-4 sentences — what it is, why it matters right now, what the listener will get from this report). Do NOT re-greet with 'welcome to Flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
+          "The host's opening words right after the station intro and first ads. ~75 words. Frame the topic with real context (3-4 sentences — what it is, why it matters right now, what the listener will get from this report). Do NOT re-greet with 'welcome to flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
       },
       scenes: {
         type: "array",
@@ -392,17 +415,18 @@ export async function generateSetup(args: {
       ].join("\n");
 
   const system = [
-    `You are casting ${formatBlurb(args.format)} for Flip.audio.`,
+    `You are casting ${formatBlurb(args.format)} for flip.audio.`,
     castInstructions,
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let this color the personas, welcome script, and voice-matching choices.`,
     "For each character, emit name, gender, a one- or two-word ethnic/accent descriptor, bio (~7-10 words, spoken out loud in the intro), and a 4-6 sentence theatrical persona.",
     useSolo
-      ? "The welcome is the host's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flip.audio...\"). Do NOT re-greet with \"welcome to Flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" or \"Alright —\" — then frame the topic with real context: 3-4 sentences covering what it is, why it matters right now, and what the listener will get from this report. End with this EXACT line as the final sentence: \"We'll be right with you after this ad.\" First-person host voice, ~75 words total."
-      : "The welcome is the moderator's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flip.audio...\"). Do NOT re-greet with \"welcome to Flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease each panelist by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're gathering the panelists and we'll start shortly, right after this ad.\" First-person moderator voice, ~75 words total.",
+      ? "The welcome is the host's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing flip.audio...\"). Do NOT re-greet with \"welcome to flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" or \"Alright —\" — then frame the topic with real context: 3-4 sentences covering what it is, why it matters right now, and what the listener will get from this report. End with this EXACT line as the final sentence: \"We'll be right with you after this ad.\" First-person host voice, ~75 words total."
+      : "The welcome is the moderator's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing flip.audio...\"). Do NOT re-greet with \"welcome to flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease each panelist by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're gathering the panelists and we'll start shortly, right after this ad.\" First-person moderator voice, ~75 words total.",
     voiceInstructions,
     "",
     `Voice catalog (engine: ${args.engine}):`,
     formatCatalog(pool),
+    FISH_TAG_GUIDANCE,
     "",
     "Emit strictly via the `emit_setup` tool.",
   ].join("\n");
@@ -512,12 +536,12 @@ export async function generateFullNewscast(args: {
       ].join("\n");
 
   const system = [
-    "You are producing a complete newscast episode of Flip.audio in a single response.",
+    "You are producing a complete newscast episode of flip.audio in a single response.",
     "Invent ONE credible, authoritative anchor — plausible name, gender, ethnicity, short on-air bio, and a 4-6 sentence persona.",
     "Vary names widely across runs. Traditional American names (Michael Davidson, Sarah Carter, David Thompson, Jennifer Walsh, etc.) are great and often the best fit — avoid defaulting to the same distinctive non-American names. AVOID 'Dmitri Volkov', 'Amara Okafor', 'Priya Patel', 'Maya Desai'.",
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let it shape word choice and energy.`,
     "",
-    "Write the welcome message (host's opening after the station intro + first ads) — ~75 words, framing the topic with real context (3-4 sentences — what it is, why it matters now, what the listener will get). No re-greeting with 'welcome to Flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
+    "Write the welcome message (host's opening after the station intro + first ads) — ~75 words, framing the topic with real context (3-4 sentences — what it is, why it matters now, what the listener will get). No re-greeting with 'welcome to flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
     "",
     "Then write all scenes in order. Each scene is a monologue broken into a handful of `turns` (to allow natural pauses). Target durations:",
     scenesBrief,
@@ -526,6 +550,7 @@ export async function generateFullNewscast(args: {
     "",
     `Voice catalog (engine: ${args.engine}):`,
     formatCatalog(pool),
+    FISH_TAG_GUIDANCE,
     "",
     "Emit strictly via the `emit_newscast` tool.",
   ].join("\n");
@@ -667,11 +692,12 @@ export async function generateScene(args: {
   // within the same episode (5-min TTL on ephemeral cache). formatGuidance,
   // openingGuidance, vibe, and general rules don't change between scenes.
   const stableSystem = [
-    `You write one scene of a Flip.audio episode using the provided cast and outline.`,
+    `You write one scene of a flip.audio episode using the provided cast and outline.`,
     formatGuidance,
     openingGuidance,
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let it shape word choice, pacing, and energy.`,
     "Lean theatrical — vivid language, strong voice, never bland.",
+    FISH_TAG_GUIDANCE,
     "Emit strictly via the `emit_scene` tool.",
   ].join("\n");
 
@@ -907,7 +933,7 @@ function stubSceneTurns(
     if (isFinal) {
       return [
         { sequence: 0, speaker: "moderator", text: `And we're back. Before we close out — here's what stuck with me about ${args.topic}.`, pauseMsAfter: 150, isAd: false },
-        { sequence: 1, speaker: "moderator", text: `Thanks for listening to Flip.audio — we'll see you next time.`, pauseMsAfter: 250, isAd: false },
+        { sequence: 1, speaker: "moderator", text: `Thanks for listening to flip.audio — we'll see you next time.`, pauseMsAfter: 250, isAd: false },
       ];
     }
     return [
@@ -925,7 +951,7 @@ function stubSceneTurns(
       { sequence: 0, speaker: "moderator", text: `Welcome back. ${leadWith?.name}, give me the one line you want listeners to walk away with on ${args.topic}.`, pauseMsAfter: 150, isAd: false },
       { sequence: 1, speaker: leadWith === p1 ? "panelist_1" : "panelist_2", text: `Stay curious about ${args.topic}. That's the whole game.`, pauseMsAfter: 150, isAd: false },
       { sequence: 2, speaker: followWith === p1 ? "panelist_1" : "panelist_2", text: `And read something tomorrow you wouldn't normally read.`, pauseMsAfter: 150, isAd: false },
-      { sequence: 3, speaker: "moderator", text: `Beautiful. Thanks ${p1?.name}, ${p2?.name}. Thanks for listening to Flip.audio.`, pauseMsAfter: 200, isAd: false },
+      { sequence: 3, speaker: "moderator", text: `Beautiful. Thanks ${p1?.name}, ${p2?.name}. Thanks for listening to flip.audio.`, pauseMsAfter: 200, isAd: false },
     ];
   }
   return [
