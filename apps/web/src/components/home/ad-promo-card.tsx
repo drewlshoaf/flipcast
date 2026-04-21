@@ -43,7 +43,7 @@ export function AdPromoCard({ prefill }: Props = {}) {
   }
 
   return (
-    <div className="glass mb-4 rounded-[32px] p-6 shadow-card">
+    <div className="glass rounded-[32px] p-6 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <span className="chip chip-pink">Ad Promo Code</span>

@@ -117,7 +117,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
       </header>
 
       {/* Hero */}
-      <section className="mb-16 grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <section className="mb-16 grid grid-cols-1 items-stretch gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div>
           <span className="chip chip-pink mb-5">
             New · personalized, on-demand podcast
@@ -139,10 +139,13 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
 
-        {/* Ad promo + popular flips stack */}
-        <div>
+        {/* Ad promo + popular flips stack. flex-col + flex-1 on the bottom
+            card so the list grows to match the left column's height. */}
+        <div className="flex flex-col gap-4">
           <AdPromoCard />
-          <PopularFlips />
+          <div className="min-h-0 flex-1">
+            <PopularFlips />
+          </div>
         </div>
       </section>
 
