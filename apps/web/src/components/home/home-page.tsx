@@ -123,10 +123,10 @@ export function HomePage({ sessionUser }: HomePageProps) {
             New · personalized, on-demand podcast
           </span>
           <h1 className="text-5xl font-semibold leading-[1.02] tracking-tight text-ink-900 md:text-6xl">
-            Make the show
+            You pick
             <br />
             <span className="bg-brand-gradient bg-clip-text text-transparent">
-              first.
+              the show
             </span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-500">
