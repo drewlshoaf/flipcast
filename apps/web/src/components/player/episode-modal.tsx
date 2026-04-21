@@ -204,11 +204,6 @@ export function EpisodeModal(props: EpisodeModalProps) {
               <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
                 {isFinished ? "Done" : isWaiting ? "Generating" : "Playing"}
               </span>
-              {plan && (
-                <span className="ml-auto font-mono text-xs text-ink-400">
-                  {Math.min(playbackIndex + 1, plan.items.length)} / {plan.items.length}
-                </span>
-              )}
             </div>
             <h2 className="line-clamp-2 text-xl font-semibold tracking-tight text-ink-900">
               {topic}
