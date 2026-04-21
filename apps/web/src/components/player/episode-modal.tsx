@@ -26,6 +26,8 @@ interface EpisodeModalProps {
   characters: Character[] | null;
   sceneTurns: Record<number, TranscriptTurn[]>;
   onEnded: () => void;
+  onError?: () => void;
+  adminView?: boolean;
 }
 
 const AD_GRADIENTS: Record<AdAccent, { bg: string; chip: string; pill: string }> = {
@@ -74,6 +76,8 @@ export function EpisodeModal(props: EpisodeModalProps) {
     characters,
     sceneTurns,
     onEnded,
+    onError,
+    adminView,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -204,6 +208,11 @@ export function EpisodeModal(props: EpisodeModalProps) {
               <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
                 {isFinished ? "Done" : isWaiting ? "Generating" : "Playing"}
               </span>
+              {adminView && plan && (
+                <span className="ml-auto font-mono text-xs text-ink-400">
+                  {Math.min(playbackIndex + 1, plan.items.length)} / {plan.items.length}
+                </span>
+              )}
             </div>
             <h2 className="line-clamp-2 text-xl font-semibold tracking-tight text-ink-900">
               {topic}
@@ -257,7 +266,8 @@ export function EpisodeModal(props: EpisodeModalProps) {
           <AdPromoCard prefill={currentPromoCode} />
         </div>
 
-        {/* key={currentSrc} forces autoplay on each new item. */}
+        {/* key={currentSrc} forces autoplay on each new item. onError advances
+            past a broken track so a bad asset can't hang the whole episode. */}
         <audio
           key={currentSrc ?? "idle"}
           ref={audioRef}
@@ -268,6 +278,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onEnded={onEnded}
+          onError={() => onError?.()}
         />
       </div>
     </div>

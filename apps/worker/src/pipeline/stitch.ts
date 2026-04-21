@@ -9,35 +9,54 @@ export interface SegmentAudio {
   pauseMsAfter: number;
 }
 
+// Canonical output format. Every segment (TTS + silence) is resampled and
+// re-channeled to these params via the concat filter, so libmp3lame sees a
+// single consistent stream at the end.
+const OUTPUT_SAMPLE_RATE = 44100;
+const OUTPUT_CHANNELS = 1;
+
 export async function stitchSegments(
   segments: SegmentAudio[],
 ): Promise<{ mp3: Buffer; durationMs: number }> {
   const workDir = await mkdtemp(join(tmpdir(), "flipcast-"));
   try {
-    const concatParts: string[] = [];
+    // Collect every concatenable input (TTS segment and silence) in playback
+    // order. We pass them as separate -i files to ffmpeg, then stitch with
+    // the concat filter. This decodes + resamples each input to canonical
+    // params before encoding, which tolerates format drift between providers
+    // (e.g. Fish Audio vs ElevenLabs outputs) that the concat *demuxer*
+    // cannot — that mismatch was producing sporadic "libmp3lame exit -22
+    // (Invalid argument)" finalization failures.
+    const inputFiles: string[] = [];
     for (const seg of segments.sort((a, b) => a.index - b.index)) {
       const segPath = join(workDir, `seg-${seg.index}.mp3`);
       await writeFile(segPath, seg.buffer);
-      concatParts.push(`file '${segPath}'`);
+      inputFiles.push(segPath);
       if (seg.pauseMsAfter > 0) {
         const silencePath = join(workDir, `silence-${seg.index}.mp3`);
         await generateSilence(silencePath, seg.pauseMsAfter);
-        concatParts.push(`file '${silencePath}'`);
+        inputFiles.push(silencePath);
       }
     }
 
-    const listPath = join(workDir, "concat.txt");
-    await writeFile(listPath, concatParts.join("\n"));
-
     const outPath = join(workDir, "final.mp3");
+    const inputArgs = inputFiles.flatMap((p) => ["-i", p]);
+    // [0:a][1:a]...concat=n=N:v=0:a=1[out]
+    const filterComplex =
+      inputFiles.map((_, i) => `[${i}:a]`).join("") +
+      `concat=n=${inputFiles.length}:v=0:a=1[out]`;
+
     await runFfmpeg([
       "-y",
-      "-f",
-      "concat",
-      "-safe",
-      "0",
-      "-i",
-      listPath,
+      ...inputArgs,
+      "-filter_complex",
+      filterComplex,
+      "-map",
+      "[out]",
+      "-ar",
+      String(OUTPUT_SAMPLE_RATE),
+      "-ac",
+      String(OUTPUT_CHANNELS),
       "-codec:a",
       "libmp3lame",
       "-b:a",
@@ -54,12 +73,14 @@ export async function stitchSegments(
 }
 
 async function generateSilence(path: string, ms: number): Promise<void> {
+  // Matches OUTPUT_SAMPLE_RATE / OUTPUT_CHANNELS so the concat filter has
+  // nothing to resample for silence in the happy case.
   await runFfmpeg([
     "-y",
     "-f",
     "lavfi",
     "-i",
-    `anullsrc=r=24000:cl=mono`,
+    `anullsrc=r=${OUTPUT_SAMPLE_RATE}:cl=mono`,
     "-t",
     (ms / 1000).toFixed(3),
     "-c:a",

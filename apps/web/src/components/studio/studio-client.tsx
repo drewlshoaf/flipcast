@@ -868,13 +868,76 @@ export function StudioClient({
             </section>
           )}
 
-          {/* Live event log (collapsed) */}
-          {hasStarted && events.length > 0 && (
-            <details className="rounded-2xl bg-white/50 p-4 text-xs ring-1 ring-slate-200/60">
-              <summary className="cursor-pointer font-medium text-ink-500">
-                Live events ({events.length})
+          {/* Admin-only diagnostic panel: playback state + resource readiness
+              + live SSE event log. Surfaces when things hang. */}
+          {sessionUser?.isAdmin && hasStarted && (
+            <details
+              className="rounded-2xl bg-ink-900/5 p-4 text-xs ring-1 ring-slate-200/60"
+              open
+            >
+              <summary className="cursor-pointer font-semibold text-ink-700">
+                Admin diagnostics
               </summary>
-              <div className="mt-3 flex max-h-60 flex-col gap-1 overflow-auto font-mono text-[11px] text-ink-500">
+
+              <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-[11px] text-ink-600 md:grid-cols-4">
+                <Diag
+                  label="stage"
+                  value={playback.stage}
+                  bad={playback.stage === "waiting"}
+                />
+                <Diag
+                  label="item"
+                  value={
+                    plan
+                      ? `${Math.min(playback.index + 1, plan.items.length)}/${plan.items.length}`
+                      : "—"
+                  }
+                />
+                <Diag
+                  label="current"
+                  value={
+                    currentItem
+                      ? currentItem.kind === "scene"
+                        ? `scene${currentItem.sceneIndex}`
+                        : currentItem.kind === "ad"
+                          ? `ad${currentItem.adIndex}`
+                          : currentItem.kind
+                      : "—"
+                  }
+                />
+                <Diag
+                  label="src"
+                  value={currentSrc ? "loaded" : "pending"}
+                  bad={!!currentItem && !currentSrc}
+                />
+                <Diag
+                  label="welcome"
+                  value={welcomeUrl ? "ready" : "pending"}
+                  bad={hasStarted && !welcomeUrl}
+                />
+                <Diag
+                  label="scenes"
+                  value={
+                    plan
+                      ? `${Object.keys(sceneUrls).length}/${plan.totalScenes}`
+                      : "—"
+                  }
+                />
+                <Diag
+                  label="ads"
+                  value={adRotation ? `${adRotation.length}` : "pending"}
+                  bad={!adRotation}
+                />
+                <Diag
+                  label="request"
+                  value={requestId ? requestId.slice(0, 8) : "—"}
+                />
+              </div>
+
+              <div className="mt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-500">
+                Events ({events.length})
+              </div>
+              <div className="mt-1 flex max-h-60 flex-col gap-1 overflow-auto font-mono text-[11px] text-ink-500">
                 {events.map((e, i) => (
                   <div key={i}>
                     <strong className="text-ink-700">{e.event}</strong>
@@ -903,6 +966,8 @@ export function StudioClient({
         characters={characters}
         sceneTurns={sceneTurns}
         onEnded={handleTrackEnded}
+        onError={handleTrackEnded}
+        adminView={sessionUser?.isAdmin ?? false}
       />
 
       {toast && (
@@ -914,3 +979,27 @@ export function StudioClient({
   );
 }
 
+function Diag({
+  label,
+  value,
+  bad,
+}: {
+  label: string;
+  value: string;
+  bad?: boolean;
+}) {
+  return (
+    <div
+      className={`rounded-md px-2 py-1 ring-1 ${
+        bad
+          ? "bg-rose-50 text-rose-700 ring-rose-200"
+          : "bg-white/70 text-ink-700 ring-slate-200"
+      }`}
+    >
+      <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-400">
+        {label}
+      </div>
+      <div className="truncate">{value}</div>
+    </div>
+  );
+}
