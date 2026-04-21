@@ -673,7 +673,22 @@ export async function generateScene(args: {
 
   const formatGuidance = useSolo
     ? "This is a newscast: a single anchor delivering the material in first person. All turns use speaker 'moderator'. Write in crisp, structured news-report cadence."
-    : "This is a three-person panel. Each character's personality must be unmistakable in word choice, rhythm, and interjections. They address each other by name occasionally.";
+    : [
+        "This is a three-person panel — a FAST, LIVELY conversation, not three monologues in sequence.",
+        "",
+        "Conversation dynamics (this is the most important thing to get right):",
+        "  • Keep most turns short — one or two sentences. MANY turns should be even shorter: a fragment, a one-line reaction, a single word ('Right.' / 'Wait —' / 'Exactly.' / 'Oh come on.').",
+        "  • Panelists interrupt each other, finish each other's sentences, jump in mid-thought, push back, react audibly. They don't wait to be called on.",
+        "  • Let panelists go at each other directly. The moderator steers and asks pointed follow-ups but does NOT have to mediate every exchange.",
+        "  • Turns stack in tight back-and-forth — in a 30-second chunk of conversation you should see 6–10 short turns, not 2–3 long speeches. Aim for a heavy ratio of short reactive turns vs longer developing ones.",
+        "  • Use `[interrupting]` at the start of a turn that cuts someone off. Use `[chuckle]` / `[surprised]` / `[emphasis]` for quick reactions. Let characters trail off with em-dashes when they're being cut.",
+        "  • Each character's personality must be unmistakable in word choice, rhythm, and interjections — even a 4-word turn should sound like only them.",
+        "",
+        "Pacing (pauseMsAfter — translated to inline silence in the audio):",
+        "  • Tight cross-talk / interruption: 80–180 ms. This is the default for reactive turns.",
+        "  • Natural beat / shift of topic: 300–500 ms.",
+        "  • Dramatic / thoughtful pause: 800–1500 ms. Use sparingly.",
+      ].join("\n");
 
   const openingGuidance = useSolo
     ? "Open the scene with the host welcoming listeners back from the ad break — e.g. \"And we're back.\" or \"Welcome back.\" — then dive into this scene's beat."
