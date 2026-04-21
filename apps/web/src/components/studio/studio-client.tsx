@@ -21,6 +21,7 @@ import type {
 import { IdeaRail } from "./idea-rail";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { EpisodeModal } from "@/components/player/episode-modal";
+import { TopicComposer } from "@/components/topic-composer";
 
 const ROLE_LABEL: Record<Character["role"], string> = {
   moderator: "Moderator",
@@ -30,59 +31,6 @@ const ROLE_LABEL: Record<Character["role"], string> = {
 
 type VoiceEngine = "fish";
 type PlaybackStage = "idle" | "playing" | "waiting" | "finished";
-
-// Clickable topic helpers. Each category has a pool; clicking a chip picks a
-// random prompt from the pool and drops it in the topic field.
-const TOPIC_HELPERS: { label: string; prompts: string[] }[] = [
-  {
-    label: "Headline",
-    prompts: [
-      "The quiet consolidation happening in independent journalism",
-      "Why everyone's suddenly rethinking the four-day workweek",
-      "The unexpected comeback of nuclear power in blue states",
-      "What's actually driving the matcha boom everywhere",
-      "The real story behind the latest AI hiring freeze",
-      "Why satellite launches are suddenly a political fight",
-    ],
-  },
-  {
-    label: "Question",
-    prompts: [
-      "Why is matcha suddenly everywhere?",
-      "Are group chats ruining our attention spans?",
-      "Is the creator economy actually sustainable?",
-      "Why does nobody agree on what 'AI' even means?",
-      "When did dinner parties quietly come back?",
-      "Is remote work winning or losing the long game?",
-    ],
-  },
-  {
-    label: "Hot take",
-    prompts: [
-      "The four-day workweek is already dead — nobody wants to admit it",
-      "Podcasts are the new talk radio and nobody's saying it",
-      "Streaming services peaked two years ago and it's all downhill",
-      "Generative AI is a worse version of Google and people prefer it",
-      "Nobody actually reads newsletters — we just feel guilty about them",
-      "Crypto didn't fail, it just got boring, which is worse",
-    ],
-  },
-  {
-    label: "People are talking about",
-    prompts: [
-      "Why everyone keeps soft-launching relationships on Instagram",
-      "The great backlash against group chats that never end",
-      "Dating app fatigue and what's actually replacing them",
-      "Why 'quiet luxury' burned out in eighteen months",
-      "Workplace Slack etiquette wars that have gotten weird",
-      "The unironic comeback of the landline",
-    ],
-  },
-];
-
-function pickRandom<T>(list: T[]): T {
-  return list[Math.floor(Math.random() * list.length)]!;
-}
 
 const REMIX_ACTIONS = [
   { id: "shorter-intro", label: "Shorter intro" },
@@ -561,48 +509,8 @@ export function StudioClient({
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* Main column */}
         <div className="flex min-w-0 flex-col gap-6">
-          {/* Creation intro / topic */}
-          <section className="glass rounded-[32px] p-7 shadow-card">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-tight text-ink-900">
-                  What's on your mind?
-                </h2>
-                <p className="mt-1 max-w-md text-sm text-ink-500">
-                  A headline, a question, a hot take, a thing you can't stop
-                  thinking about. We'll turn it into a real-sounding episode.
-                </p>
-              </div>
-              <span className="chip chip-pink hidden md:inline-flex">
-                topic first
-              </span>
-            </div>
-
-            <textarea
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g. why are we suddenly all obsessed with matcha?"
-              rows={3}
-              className="w-full resize-none rounded-2xl bg-white/80 px-5 py-4 text-lg leading-snug text-ink-900 outline-none ring-1 ring-slate-200 transition placeholder:text-ink-300 focus:ring-2 focus:ring-sky-300"
-            />
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                Randomize
-              </span>
-              {TOPIC_HELPERS.map((h) => (
-                <button
-                  key={h.label}
-                  type="button"
-                  onClick={() => setTopic(pickRandom(h.prompts))}
-                  title={`Randomize a ${h.label.toLowerCase()} into the topic`}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
-                >
-                  <span aria-hidden>✨</span> {h.label}
-                </button>
-              ))}
-            </div>
-          </section>
+          {/* Topic composer — same component as the home hero. */}
+          <TopicComposer topic={topic} onTopicChange={setTopic} />
 
           {/* Format */}
           <section>

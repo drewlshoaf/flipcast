@@ -1,14 +1,7 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
-
-const PROMPT_CHIPS = [
-  "Why is matcha everywhere now?",
-  "What happened with the container wars?",
-  "The case for a four-day week",
-  "Is AI actually changing radio?",
-  "The best dinner party debates right now",
-];
+import { HeroComposer } from "@/components/home/hero-composer";
 
 const USE_CASES = [
   {
@@ -140,36 +133,8 @@ export function HomePage({ sessionUser }: HomePageProps) {
             headline, a hot take, something you can't stop thinking about — and
             flip.audio produces a ~7 minute episode you can play right now.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link
-              href={studioHref()}
-              className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
-            >
-              Start a flip
-            </Link>
-            <Link
-              href={studioHref()}
-              className="inline-flex h-12 items-center rounded-full bg-white/80 px-7 text-base font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
-            >
-              See how it works
-            </Link>
-          </div>
-
-          <div className="mt-8">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
-              Try one of these
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {PROMPT_CHIPS.map((p) => (
-                <Link
-                  key={p}
-                  href={studioHref(p)}
-                  className="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
-                >
-                  {p}
-                </Link>
-              ))}
-            </div>
+          <div className="mt-7">
+            <HeroComposer />
           </div>
         </div>
 
