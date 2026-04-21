@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AVAILABLE_VIBES,
   UI_FORMATS,
@@ -20,6 +20,7 @@ import type {
 } from "@flipcast/types";
 import { IdeaRail } from "./idea-rail";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
+import { EpisodeModal } from "@/components/player/episode-modal";
 
 const ROLE_LABEL: Record<Character["role"], string> = {
   moderator: "Moderator",
@@ -197,6 +198,7 @@ export function StudioClient({
   const [characters, setCharacters] = useState<Character[] | null>(null);
   const [outline, setOutline] = useState<SceneOutline[] | null>(null);
   const [topicContext, setTopicContext] = useState<string | null>(null);
+  const [welcomeText, setWelcomeText] = useState<string | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
   const [sceneUrls, setSceneUrls] = useState<Record<number, string>>({});
   const [adRotation, setAdRotation] = useState<string[] | null>(null);
@@ -206,14 +208,12 @@ export function StudioClient({
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
-  // Playback state — audio auto-plays; there's no play/pause button.
+  // Playback state — audio auto-plays inside the EpisodeModal; no play/pause.
   const [playback, setPlayback] = useState<{
     stage: PlaybackStage;
     index: number;
   }>({ stage: "idle", index: 0 });
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
@@ -236,11 +236,13 @@ export function StudioClient({
             | {
                 characters?: Character[];
                 topicContext?: string;
+                welcomeText?: string;
                 outline?: SceneOutline[];
               }
             | undefined;
           if (data?.characters) setCharacters(data.characters);
           if (data?.topicContext) setTopicContext(data.topicContext);
+          if (data?.welcomeText) setWelcomeText(data.welcomeText);
           if (data?.outline) setOutline(data.outline);
         }
         if (evt.event === "welcome_ready") {
@@ -330,14 +332,14 @@ export function StudioClient({
     setCharacters(null);
     setOutline(null);
     setTopicContext(null);
+    setWelcomeText(null);
     setWelcomeUrl(null);
     setSceneUrls({});
     setSceneTurns({});
     setAdRotation(null);
     setPlan(null);
     setPlayback({ stage: "idle", index: 0 });
-    setCurrentTime(0);
-    setDuration(0);
+    setModalOpen(false);
     // Fire ad rotation fetch in parallel so the URLs are ready by the time
     // the player hits its first ad slot.
     void fetch("/api/ads/rotation?count=5", { cache: "no-store" })
@@ -367,6 +369,7 @@ export function StudioClient({
       setRequestId(data.requestId);
       if (data.sequence) setPlan(data.sequence as SequencePlan);
       setPlayback({ stage: "playing", index: 0 });
+      setModalOpen(true);
     } finally {
       setSubmitting(false);
     }
@@ -395,6 +398,7 @@ export function StudioClient({
     setCharacters(null);
     setOutline(null);
     setTopicContext(null);
+    setWelcomeText(null);
     setWelcomeUrl(null);
     setSceneUrls({});
     setAdRotation(null);
@@ -425,51 +429,6 @@ export function StudioClient({
       ? plan.items[playback.index] ?? null
       : null;
   const currentSrc = currentItem ? srcForItem(currentItem) : null;
-  const isFinished = playback.stage === "finished";
-  const isWaiting =
-    playback.stage === "waiting" || (!!currentItem && !currentSrc);
-
-  // Progress = playback position across the sequence. During each item the
-  // bar fills by that item's share as currentTime advances.
-  const progressPercent = useMemo(() => {
-    if (!plan || !hasStarted) return submitting ? 4 : 0;
-    if (isFinished) return 100;
-    const total = plan.items.length;
-    const within = duration > 0 ? currentTime / duration : 0;
-    const pct = ((playback.index + within) / total) * 100;
-    return Math.max(0, Math.min(100, pct));
-  }, [
-    plan,
-    hasStarted,
-    submitting,
-    isFinished,
-    duration,
-    currentTime,
-    playback.index,
-  ]);
-
-  const currentStageLabel = useMemo(() => {
-    if (isFinished) return "Finished.";
-    if (!hasStarted && submitting) return "Starting up…";
-    if (!hasStarted) return null;
-    if (isWaiting) {
-      const last = [...events].reverse().find((e) => !!e.message);
-      return last?.message ? `${last.message} Waiting on audio…` : "Waiting on audio…";
-    }
-    if (currentItem) {
-      if (currentItem.kind === "station_intro") return "Station intro";
-      if (currentItem.kind === "ad")
-        return `Ad break ${currentItem.adIndex + 1}`;
-      if (currentItem.kind === "welcome") return "Welcome";
-      if (currentItem.kind === "scene")
-        return currentItem.isFinal
-          ? `Scene ${currentItem.sceneIndex} — closing`
-          : `Scene ${currentItem.sceneIndex}`;
-    }
-    return "Working…";
-  }, [currentItem, isFinished, isWaiting, events, submitting, hasStarted]);
-
-  const isComplete = isFinished;
 
   const characterByRole = new Map(characters?.map((c) => [c.role, c]) ?? []);
 
@@ -739,60 +698,16 @@ export function StudioClient({
             </div>
           )}
 
-          {/* Progress + hidden audio (no play button, auto-plays) */}
-          {(submitting || hasStarted) && (
-            <section className="glass rounded-3xl p-6 shadow-card">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                    {isFinished ? "Done" : isWaiting ? "Generating" : "Playing"}
-                  </div>
-                  <div className="mt-1 text-sm text-ink-600">
-                    {currentStageLabel}
-                  </div>
-                </div>
-                <div className="text-sm font-mono text-ink-500">
-                  {plan
-                    ? `${Math.min(playback.index + 1, plan.items.length)} / ${plan.items.length}`
-                    : ""}
-                </div>
-              </div>
-              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-200/70">
-                <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-brand-gradient transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                {isWaiting && (
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="h-full w-1/3 -translate-x-full animate-shimmer-bar bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-                  </div>
-                )}
-              </div>
-              {requestId && isComplete && (
-                <div className="mt-4 flex justify-end">
-                  <Link
-                    href={`/player/${requestId}`}
-                    className="inline-flex h-10 items-center rounded-full bg-brand-gradient px-5 text-sm font-semibold text-white shadow-glow transition hover:scale-[1.02]"
-                  >
-                    Open player →
-                  </Link>
-                </div>
-              )}
-              {/* key={currentSrc} forces autoplay on each new item */}
-              <audio
-                key={currentSrc ?? "idle"}
-                ref={audioRef}
-                src={currentSrc ?? undefined}
-                autoPlay
-                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                onEnded={() => {
-                  setCurrentTime(0);
-                  setDuration(0);
-                  handleTrackEnded();
-                }}
-              />
-            </section>
+          {/* Reopen pill — session active but modal dismissed. */}
+          {hasStarted && !modalOpen && (
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="glass inline-flex items-center gap-2 self-start rounded-full px-5 py-2.5 text-sm font-semibold text-ink-900 shadow-card transition hover:shadow-cardHover"
+            >
+              <span className="inline-flex h-2 w-2 rounded-full bg-pink-400 animate-pulse-soft" />
+              Reopen player
+            </button>
           )}
 
           {/* Remix actions */}
@@ -974,6 +889,21 @@ export function StudioClient({
         {/* Right column */}
         <IdeaRail onSelect={setTopic} />
       </div>
+
+      <EpisodeModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        topic={topic}
+        plan={plan}
+        stage={playback.stage}
+        playbackIndex={playback.index}
+        currentItem={currentItem ?? null}
+        currentSrc={currentSrc}
+        welcomeText={welcomeText}
+        characters={characters}
+        sceneTurns={sceneTurns}
+        onEnded={handleTrackEnded}
+      />
 
       {toast && (
         <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900/90 px-5 py-2.5 text-sm font-medium text-white shadow-glow">

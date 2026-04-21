@@ -2,12 +2,29 @@
 // and are selected via /api/ads/rotation at playback. Kept in sync with
 // apps/worker/scripts/generate-ads.ts so the admin view can report
 // character counts without pulling in worker-only deps.
+export type AdAccent =
+  | "indigo"
+  | "emerald"
+  | "amber"
+  | "violet"
+  | "orange"
+  | "slate";
+
 export interface AdMeta {
   index: number;
   product: string;
   voiceId: string;
   targetSeconds: number;
   text: string;
+  // Promo code we want listeners to enter on flipcast.app. Duplicated from
+  // the ad script so the UI can render it as a prominent chip.
+  promoCode: string;
+  // Visual accent for the in-player ad card. Fallback when imageUrl is null.
+  accent: AdAccent;
+  // Optional brand artwork. When null, the player renders a gradient +
+  // typography card using `accent`. Drop a URL here (public path or
+  // absolute) and the player will show it instead.
+  imageUrl: string | null;
 }
 
 export const AD_POOL: AdMeta[] = [
@@ -16,6 +33,9 @@ export const AD_POOL: AdMeta[] = [
     product: "NapkinSleep Mattress",
     voiceId: "fa-jim",
     targetSeconds: 25,
+    promoCode: "NAPKIN",
+    accent: "indigo",
+    imageUrl: null,
     text:
       "Real talk — I spent years sleeping like I'd lost a bet. Pillow wars, midnight thermostat battles, the works. Then I switched to a Napkin mattress. Cooling foam, pressure-mapped support, a three-hundred-sixty-five-night return policy — zero regret. I actually look forward to Sundays now. Head to flipcast dot app and enter promo code NAPKIN for twenty percent off. Sweet dreams.",
   },
@@ -24,6 +44,9 @@ export const AD_POOL: AdMeta[] = [
     product: "FarmBox Meal Kits",
     voiceId: "fa-paula",
     targetSeconds: 25,
+    promoCode: "FARMBOX",
+    accent: "emerald",
+    imageUrl: null,
     text:
       "Last Tuesday I ate dry cereal standing over the kitchen sink. Not my finest hour. FarmBox meal kits fixed it — farm-fresh ingredients, twenty-minute recipes, and no more weeknight panic at six-thirty. They even pre-measure the spices, which is honestly emotional support. Go to flipcast dot app and enter promo code FARMBOX to get your first four meals free.",
   },
@@ -32,6 +55,9 @@ export const AD_POOL: AdMeta[] = [
     product: "LedgerMind Finance App",
     voiceId: "fa-alex",
     targetSeconds: 25,
+    promoCode: "LEDGER",
+    accent: "amber",
+    imageUrl: null,
     text:
       "Seventy percent of us have no idea where last month's money actually went. Terrifying, right? LedgerMind is the finance app that fixes it — automatic categorization, scary-accurate forecasts, and zero shame notifications at two in the morning. You can finally see what's going on without hating yourself. Head to flipcast dot app and enter promo code LEDGER for three months free.",
   },
@@ -40,6 +66,9 @@ export const AD_POOL: AdMeta[] = [
     product: "NightShade VPN",
     voiceId: "fa-charlie",
     targetSeconds: 25,
+    promoCode: "NIGHTSHADE",
+    accent: "violet",
+    imageUrl: null,
     text:
       "Quick question — when did you last actually read a privacy policy? Right, exactly. NightShade VPN handles the hard part for you. Military-grade encryption, a strict no-logs policy, and it runs faster on bad hotel wifi than the hotel itself. Two clicks and you're covered on every device. Go to flipcast dot app and enter promo code NIGHTSHADE for two months free.",
   },
@@ -48,6 +77,9 @@ export const AD_POOL: AdMeta[] = [
     product: "BrightKettle Coffee",
     voiceId: "fa-sarah",
     targetSeconds: 25,
+    promoCode: "BRIGHTKETTLE",
+    accent: "orange",
+    imageUrl: null,
     text:
       "I can spot a bad cup of coffee from across the room. Stale, burned, just sad. BrightKettle fixes that — small-batch beans, roasted the morning they ship, and on your doorstep within forty-eight hours of roast. Tastes like someone who actually cares about coffee made it. Head to flipcast dot app and enter promo code BRIGHTKETTLE for fifteen dollars off your first bag.",
   },
@@ -56,6 +88,9 @@ export const AD_POOL: AdMeta[] = [
     product: "Anvil Fitness",
     voiceId: "fa-allie",
     targetSeconds: 25,
+    promoCode: "ANVIL",
+    accent: "slate",
+    imageUrl: null,
     text:
       "Quick gym confession — I avoided strength training for years because every app felt like a spreadsheet. Anvil Fitness fixed it for me. Ten-minute routines, coach-designed, and built around your actual schedule, not some fantasy version of your life. You just show up. Go to flipcast dot app and enter promo code ANVIL — your first month is free.",
   },
