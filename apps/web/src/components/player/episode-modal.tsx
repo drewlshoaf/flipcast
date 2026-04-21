@@ -125,6 +125,14 @@ export function EpisodeModal(props: EpisodeModalProps) {
     return Math.max(0, Math.min(100, pct));
   }, [plan, isFinished, duration, currentTime, playbackIndex]);
 
+  // If an ad is currently playing, surface its promo code so the AdPromoCard
+  // below can auto-fill its input with it.
+  const currentPromoCode = useMemo<string | null>(() => {
+    if (!currentItem || currentItem.kind !== "ad") return null;
+    const ad = AD_BY_INDEX.get((currentItem.adIndex % 6) + 1);
+    return ad?.promoCode ?? null;
+  }, [currentItem]);
+
   // Which character is speaking right now.
   // - Welcome segment: always the moderator (single voice, single block).
   // - Scene: estimate by mapping the audio's currentTime/duration fraction
@@ -249,8 +257,9 @@ export function EpisodeModal(props: EpisodeModalProps) {
             paused={paused}
           />
 
-          {/* Always-visible promo box */}
-          <AdPromoCard />
+          {/* Always-visible promo box. Auto-fills with the current ad's code
+              while an ad is playing. */}
+          <AdPromoCard prefill={currentPromoCode} />
         </div>
 
         {/* key={currentSrc} forces autoplay on each new item. */}

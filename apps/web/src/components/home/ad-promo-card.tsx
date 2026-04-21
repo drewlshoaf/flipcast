@@ -1,12 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export function AdPromoCard() {
+interface Props {
+  // When set, the input auto-fills with this value. Only overwrites while the
+  // field is empty or still holding the last auto-filled value — user edits
+  // are preserved.
+  prefill?: string | null;
+}
+
+export function AdPromoCard({ prefill }: Props = {}) {
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<null | { kind: "ok" | "err"; msg: string }>(
     null,
   );
+  const lastPrefillRef = useRef("");
+
+  useEffect(() => {
+    if (!prefill) return;
+    setCode((current) => {
+      if (current === "" || current === lastPrefillRef.current) {
+        lastPrefillRef.current = prefill;
+        return prefill;
+      }
+      return current;
+    });
+  }, [prefill]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
