@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
-import { HeroComposer } from "@/components/home/hero-composer";
-import { PopularFlips } from "@/components/home/popular-flips";
+
+const PROMPT_CHIPS = [
+  "Why is matcha everywhere now?",
+  "What happened with the container wars?",
+  "The case for a four-day week",
+  "Is AI actually changing radio?",
+  "The best dinner party debates right now",
+];
 
 const USE_CASES = [
   {
@@ -117,7 +123,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
       </header>
 
       {/* Hero */}
-      <section className="mb-16 grid grid-cols-1 items-stretch gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+      <section className="mb-16 grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div>
           <span className="chip chip-pink mb-5">
             the world first · personalized, on-demand podcast
@@ -133,18 +139,43 @@ export function HomePage({ sessionUser }: HomePageProps) {
             headline, a hot take, something you can't stop thinking about — and
             flip.audio produces a ~7 minute episode you can play right now.
           </p>
-          <div className="mt-7">
-            <HeroComposer />
+          <div className="mt-7 flex flex-wrap gap-3">
+            <Link
+              href={studioHref()}
+              className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
+            >
+              Start a flip
+            </Link>
+            <Link
+              href={studioHref()}
+              className="inline-flex h-12 items-center rounded-full bg-white/80 px-7 text-base font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
+            >
+              See how it works
+            </Link>
+          </div>
+
+          <div className="mt-8">
+            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
+              Try one of these
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {PROMPT_CHIPS.map((p) => (
+                <Link
+                  key={p}
+                  href={studioHref(p)}
+                  className="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
+                >
+                  {p}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Ad promo + popular flips stack. Forced full-height flex column
-            so PopularFlips can flex-1 into the remaining space and
-            terminate exactly at the bottom of the What's on your mind
-            tile (which is the tallest left-column child). */}
-        <div className="flex h-full flex-col gap-4">
+        {/* Ad promo + preview stack */}
+        <div>
           <AdPromoCard />
-          <PopularFlips className="min-h-0 flex-1" />
+          <PreviewCard />
         </div>
       </section>
 
@@ -274,3 +305,69 @@ export function HomePage({ sessionUser }: HomePageProps) {
   );
 }
 
+function PreviewCard() {
+  return (
+    <div className="glass relative overflow-hidden rounded-[32px] p-6 shadow-cardHover">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="chip chip-sky">Preview</span>
+          <span className="chip chip-mint">~7 min</span>
+        </div>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+          Live
+        </span>
+      </div>
+
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pink-600">
+          Scene 1
+        </div>
+        <div className="mt-1 text-xl font-semibold tracking-tight text-ink-900">
+          Why is matcha suddenly everywhere?
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70">
+        <div className="flex items-center gap-4">
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-gradient shadow-glow">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path d="M7 5v14l12-7-12-7z" fill="white" />
+            </svg>
+          </span>
+          <div className="flex-1">
+            <div className="h-2 overflow-hidden rounded-full bg-slate-200/70">
+              <div className="h-full w-[42%] rounded-full bg-brand-gradient" />
+            </div>
+            <div className="mt-2 flex justify-between text-[11px] font-medium text-ink-400">
+              <span>2:58</span>
+              <span>7:08</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        <div className="rounded-xl bg-sky-50 p-3 ring-1 ring-sky-100">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-600">
+            Format
+          </div>
+          <div className="mt-1 text-sm font-semibold text-ink-900">Panel</div>
+        </div>
+        <div className="rounded-xl bg-pink-50 p-3 ring-1 ring-pink-100">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pink-600">
+            Vibe
+          </div>
+          <div className="mt-1 text-sm font-semibold text-ink-900">
+            Playful
+          </div>
+        </div>
+        <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-600">
+            Voices
+          </div>
+          <div className="mt-1 text-sm font-semibold text-ink-900">3</div>
+        </div>
+      </div>
+    </div>
+  );
+}
