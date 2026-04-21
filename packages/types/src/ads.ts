@@ -13,86 +13,98 @@ export type AdAccent =
 export interface AdMeta {
   index: number;
   product: string;
-  voiceId: string;
+  // All voices involved in the read, in `<|speaker:N|>` order. Single-voice
+  // ads have length 1.
+  voiceIds: string[];
   targetSeconds: number;
-  text: string;
   // Promo code we want listeners to enter on flip.audio. Duplicated from
   // the ad script so the UI can render it as a prominent chip.
   promoCode: string;
   // Visual accent for the in-player ad card. Fallback when imageUrl is null.
   accent: AdAccent;
   // Optional brand artwork. When null, the player renders a gradient +
-  // typography card using `accent`. Drop a URL here (public path or
-  // absolute) and the player will show it instead.
+  // typography card using `accent`.
   imageUrl: string | null;
+  text: string;
 }
 
 export const AD_POOL: AdMeta[] = [
   {
     index: 1,
     product: "NapkinSleep Mattress",
-    voiceId: "fa-jim",
+    voiceIds: ["fa-jim", "fa-sarah"],
     targetSeconds: 25,
-    promoCode: "NAPKIN",
+    promoCode: "SLEEP",
     accent: "indigo",
     imageUrl: null,
     text:
-      "Real talk — I spent years sleeping like I'd lost a bet. Pillow wars, midnight thermostat battles, the works. Then I switched to a Napkin mattress. Cooling foam, pressure-mapped support, a three-hundred-sixty-five-night return policy — zero regret. I actually look forward to Sundays now. Head to flip dot audio and enter promo code NAPKIN for twenty percent off. Sweet dreams.",
+      "<|speaker:0|>[exhale] Okay, [short pause] I'm done. Pillow wars, thermostat fights, three-a-m tossing — it's killing me.\n" +
+      "<|speaker:1|>[chuckle] Same. Until I switched to a Napkin mattress. Cooling foam, pressure-mapped support, [emphasis] three hundred and sixty-five nights to return it.\n" +
+      "<|speaker:0|>[surprised] Three sixty-five?\n" +
+      "<|speaker:1|>[confident] Three sixty-five. [pause] And I actually look forward to Sundays now.\n" +
+      "<|speaker:0|>[relieved] Where do I—\n" +
+      "<|speaker:1|>Flip dot audio. Promo code SLEEP. Twenty percent off.\n" +
+      "<|speaker:0|>[sigh] Sweet dreams.",
   },
   {
     index: 2,
     product: "FarmBox Meal Kits",
-    voiceId: "fa-paula",
+    voiceIds: ["fa-paula"],
     targetSeconds: 25,
-    promoCode: "FARMBOX",
+    promoCode: "FARM",
     accent: "emerald",
     imageUrl: null,
     text:
-      "Last Tuesday I ate dry cereal standing over the kitchen sink. Not my finest hour. FarmBox meal kits fixed it — farm-fresh ingredients, twenty-minute recipes, and no more weeknight panic at six-thirty. They even pre-measure the spices, which is honestly emotional support. Go to flip dot audio and enter promo code FARMBOX to get your first four meals free.",
+      "[sigh] Last Tuesday I ate dry cereal [pause] standing over the kitchen sink. Not my finest hour. [short pause] FarmBox meal kits fixed it. [emphasis] Farm-fresh ingredients, twenty-minute recipes, and no more weeknight panic at six-thirty. They even pre-measure the spices — which is, honestly, [chuckle] emotional support. Go to flip dot audio, promo code FARM. Your first four meals are on the house.",
   },
   {
     index: 3,
     product: "LedgerMind Finance App",
-    voiceId: "fa-alex",
+    voiceIds: ["fa-alex"],
     targetSeconds: 25,
     promoCode: "LEDGER",
     accent: "amber",
     imageUrl: null,
     text:
-      "Seventy percent of us have no idea where last month's money actually went. Terrifying, right? LedgerMind is the finance app that fixes it — automatic categorization, scary-accurate forecasts, and zero shame notifications at two in the morning. You can finally see what's going on without hating yourself. Head to flip dot audio and enter promo code LEDGER for three months free.",
+      "[confident] Seventy percent of us have no idea where last month's money actually went. [pause] Terrifying, right? [short pause] LedgerMind is the finance app that fixes it. Automatic categorization, [emphasis] scary-accurate forecasts, and zero shame notifications at two a-m. [chuckle] You finally see what's going on without hating yourself. Flip dot audio, promo code LEDGER. Three months free.",
   },
   {
     index: 4,
     product: "NightShade VPN",
-    voiceId: "fa-charlie",
+    voiceIds: ["fa-charlie", "fa-allie"],
     targetSeconds: 25,
-    promoCode: "NIGHTSHADE",
+    promoCode: "SHADE",
     accent: "violet",
     imageUrl: null,
     text:
-      "Quick question — when did you last actually read a privacy policy? Right, exactly. NightShade VPN handles the hard part for you. Military-grade encryption, a strict no-logs policy, and it runs faster on bad hotel wifi than the hotel itself. Two clicks and you're covered on every device. Go to flip dot audio and enter promo code NIGHTSHADE for two months free.",
+      "<|speaker:0|>[curious] Quick question. When did you last actually read a privacy policy?\n" +
+      "<|speaker:1|>[laughing] Never. Why would I?\n" +
+      "<|speaker:0|>[emphasis] Exactly. That's why NightShade VPN exists. Military-grade encryption, strict no-logs policy, and it runs [pause] faster on bad hotel wifi than the hotel itself.\n" +
+      "<|speaker:1|>[surprised] Seriously?\n" +
+      "<|speaker:0|>Two clicks, every device, covered. [short pause] Flip dot audio, promo code SHADE. Two months free.\n" +
+      "<|speaker:1|>[delight] Okay, sign me up.",
   },
   {
     index: 5,
     product: "BrightKettle Coffee",
-    voiceId: "fa-sarah",
+    voiceIds: ["fa-sarah"],
     targetSeconds: 25,
-    promoCode: "BRIGHTKETTLE",
+    promoCode: "BREW",
     accent: "orange",
     imageUrl: null,
     text:
-      "I can spot a bad cup of coffee from across the room. Stale, burned, just sad. BrightKettle fixes that — small-batch beans, roasted the morning they ship, and on your doorstep within forty-eight hours of roast. Tastes like someone who actually cares about coffee made it. Head to flip dot audio and enter promo code BRIGHTKETTLE for fifteen dollars off your first bag.",
+      "[emphasis] I can spot a bad cup of coffee from across the room. [pause] Stale, burned — [sigh] just sad. [short pause] BrightKettle fixes it. Small-batch beans, roasted the morning they ship, on your doorstep within forty-eight hours of roast. [delight] Tastes like someone who actually cares about coffee made it. Flip dot audio, promo code BREW. Fifteen dollars off your first bag.",
   },
   {
     index: 6,
     product: "Anvil Fitness",
-    voiceId: "fa-allie",
+    voiceIds: ["fa-allie"],
     targetSeconds: 25,
-    promoCode: "ANVIL",
+    promoCode: "LIFT",
     accent: "slate",
     imageUrl: null,
     text:
-      "Quick gym confession — I avoided strength training for years because every app felt like a spreadsheet. Anvil Fitness fixed it for me. Ten-minute routines, coach-designed, and built around your actual schedule, not some fantasy version of your life. You just show up. Go to flip dot audio and enter promo code ANVIL — your first month is free.",
+      "[chuckle] Gym confession — [short pause] I avoided strength training for years. Every app felt like a spreadsheet. [pause] Then Anvil Fitness fixed it. [emphasis] Ten-minute routines, coach-designed, built around your actual schedule — not some fantasy version of your life. You just show up. [confident] Flip dot audio, promo code LIFT. Your first month is free.",
   },
 ];
 
@@ -100,8 +112,7 @@ export const AD_BY_INDEX = new Map(AD_POOL.map((a) => [a.index, a]));
 
 // When the plan allocates N ad slots, the player cycles through the rotation
 // returned by /api/ads/rotation (random 5-of-6). For reporting purposes we
-// use the deterministic fallback order: slot i → ad-{i+1}. This gives a
-// stable, reproducible per-flipcast character count.
+// use the deterministic fallback order: slot i → ad-{i+1}.
 export function adForSlot(slotIndex: number): AdMeta {
   const poolSize = AD_POOL.length;
   const ad = AD_POOL[slotIndex % poolSize];

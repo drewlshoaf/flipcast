@@ -1,78 +1,27 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
-import { AdPromoCard } from "@/components/home/ad-promo-card";
+import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
+import { SurpriseMe } from "@/components/home/surprise-me";
 
-const PROMPT_CHIPS = [
-  "Why is matcha everywhere now?",
-  "What happened with the container wars?",
-  "The case for a four-day week",
-  "Is AI actually changing radio?",
-  "The best dinner party debates right now",
-];
-
-const USE_CASES = [
+const SUPPORT_FEATURES = [
   {
-    title: "Last night's headline",
-    body: "Hear three takes before breakfast.",
-    prompt: "the biggest headline from yesterday",
-    accent: "sky" as const,
-  },
-  {
-    title: "A niche you love",
-    body: "Dive into the corner of the internet that keeps you up.",
-    prompt: "an explainer on specialty coffee sourcing",
-    accent: "pink" as const,
-  },
-  {
-    title: "A debate you want",
-    body: "Pit two strong voices against each other.",
-    prompt: "should cities ban private cars downtown",
-    accent: "mint" as const,
-  },
-];
-
-const VIBE_SHOWCASE = [
-  {
-    label: "Serious",
-    body: "Measured and weighty.",
-    accent: "bg-sky-100 text-sky-700",
-  },
-  {
-    label: "Playful",
-    body: "Bright and witty.",
-    accent: "bg-pink-100 text-pink-700",
-  },
-  {
-    label: "Dramatic",
-    body: "Tense and cinematic.",
-    accent: "bg-violet-100 text-violet-700",
-  },
-  {
-    label: "Cozy",
-    body: "Warm and easygoing.",
-    accent: "bg-emerald-100 text-emerald-700",
-  },
-];
-
-const EXPLAINERS = [
-  {
-    label: "Topic first",
-    body: "Start with the thing you actually want to hear about. No forms.",
+    label: "Start from any spark",
+    body: "A headline, a question, a hot take. Anything you can't stop thinking about.",
     chip: "chip-sky",
   },
   {
-    label: "Tap the shape",
-    body: "Format and vibe are choices, not configuration.",
+    label: "Idea to episode, fast",
+    body: "Tap, listen. The first audio plays while the rest is still being made.",
     chip: "chip-pink",
   },
   {
-    label: "Player is the editor",
-    body: "Preview, outline, and remix live inside the player.",
+    label: "Bright by default",
+    body: "Real voices, real pacing, real character. Designed for the ear, not the dashboard.",
     chip: "chip-mint",
   },
   {
-    label: "Made for you",
-    body: "Every flip.audio is produced on demand, about what you said.",
+    label: "Fun before friction",
+    body: "No long forms. No setup. Surprise yourself, then remix in the studio.",
     chip: "chip-slate",
   },
 ];
@@ -82,34 +31,25 @@ function studioHref(topic?: string): string {
   return `/studio?topic=${encodeURIComponent(topic)}`;
 }
 
-const ACCENT_MAP = {
-  sky: "from-sky-400/40 to-sky-200/0",
-  pink: "from-pink-400/40 to-pink-200/0",
-  mint: "from-emerald-400/40 to-emerald-200/0",
-} as const;
-
 interface HomePageProps {
   sessionUser: SessionUser | null;
 }
 
 export function HomePage({ sessionUser }: HomePageProps) {
   return (
-    <div className="mx-auto max-w-[1200px] px-6 py-6 md:px-10">
-      {/* Masthead */}
-      <header className="mb-14 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="mx-auto max-w-[1280px] px-6 py-6 md:px-10">
+      {/* Top nav */}
+      <header className="mb-10 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-2xl bg-brand-gradient shadow-glow">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M7 5v14l12-7-12-7z"
-                fill="white"
-              />
+              <path d="M7 5v14l12-7-12-7z" fill="white" />
             </svg>
           </span>
           <span className="text-lg font-semibold tracking-tight text-ink-900">
             flip.audio
           </span>
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
           <Link
             href={studioHref()}
@@ -122,252 +62,111 @@ export function HomePage({ sessionUser }: HomePageProps) {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="mb-16 grid grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <div>
-          <span className="chip chip-pink mb-5">
-            the world first · personalized, on-demand podcast
-          </span>
-          <h1 className="whitespace-nowrap text-4xl font-semibold leading-[1.02] tracking-tight text-ink-900 md:text-5xl">
-            You pick{" "}
+      {/* Hero with bubble field */}
+      <section className="relative mx-auto mb-16 min-h-[640px] overflow-visible">
+        {/* Bubble field — hidden on small screens to keep things calm */}
+        <div className="pointer-events-none absolute inset-0 hidden md:block">
+          {BUBBLES.map((b) => (
+            <Link
+              key={b.text}
+              href={studioHref(b.text)}
+              className={`pointer-events-auto absolute inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:-translate-y-0.5 hover:shadow-cardHover ${bubbleClass(b)}`}
+              style={{
+                left: `${b.x}%`,
+                top: `${b.y}%`,
+                transform: `translate(-50%, -50%) rotate(${b.tilt ?? 0}deg)`,
+              }}
+            >
+              {b.text}
+            </Link>
+          ))}
+        </div>
+
+        {/* Soft white glow behind the central read zone */}
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
+
+        {/* Central read zone */}
+        <div className="relative z-10 mx-auto flex max-w-[640px] flex-col items-center px-4 pt-6 text-center md:pt-20">
+          {/* Big pink play button */}
+          <Link
+            href={studioHref()}
+            aria-label="Start a flip"
+            className="group relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-rose-500 shadow-glow ring-1 ring-pink-300/60 transition hover:scale-[1.04] active:scale-[0.98] md:h-40 md:w-40"
+          >
+            <span className="absolute inset-0 rounded-full bg-pink-300 opacity-30 blur-xl transition group-hover:opacity-50" />
+            <svg
+              className="relative ml-2 md:ml-3"
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+            >
+              <path d="M7 5v14l12-7-12-7z" fill="white" />
+            </svg>
+          </Link>
+
+          <h1 className="mt-8 text-4xl font-semibold leading-[1.05] tracking-tight text-ink-900 md:text-6xl">
             <span className="bg-brand-gradient bg-clip-text text-transparent">
-              the show
-            </span>
+              You
+            </span>{" "}
+            pick the show.
           </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-500">
-            The podcast doesn't exist until you ask for it. Drop a topic — a
-            headline, a hot take, something you can't stop thinking about — and
-            flip.audio produces a ~7 minute episode you can play right now.
+
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-500 md:text-lg">
+            flip.audio should feel like play, not setup. Start from any tiny
+            spark — a question, a rumor, a hot take, a trend — and jump straight
+            into a fresh episode.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
             <Link
               href={studioHref()}
               className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
               Start a flip
             </Link>
-            <Link
-              href={studioHref()}
-              className="inline-flex h-12 items-center rounded-full bg-white/80 px-7 text-base font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
-            >
-              See how it works
-            </Link>
+            <SurpriseMe />
           </div>
-
-          <div className="mt-8">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
-              Try one of these
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {PROMPT_CHIPS.map((p) => (
-                <Link
-                  key={p}
-                  href={studioHref(p)}
-                  className="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
-                >
-                  {p}
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Ad promo + preview stack */}
-        <div>
-          <AdPromoCard />
-          <PreviewCard />
         </div>
       </section>
 
-      {/* Use cases */}
-      <section className="mb-16">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight text-ink-900">
-              What do you want to hear about?
-            </h2>
-            <p className="mt-2 max-w-xl text-base text-ink-500">
-              Three good starting points. Each one opens the Studio with the
-              topic already filled in.
-            </p>
-          </div>
+      {/* Mobile-only fallback chip row, since the bubble field is hidden */}
+      <section className="mb-12 md:hidden">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
+          Try one of these
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {USE_CASES.map((u) => (
+        <div className="flex flex-wrap gap-2">
+          {BUBBLES.slice(0, 8).map((b) => (
             <Link
-              key={u.title}
-              href={studioHref(u.prompt)}
-              className="group relative overflow-hidden rounded-3xl bg-white/80 p-6 ring-1 ring-slate-200 transition hover:shadow-cardHover"
+              key={b.text}
+              href={studioHref(b.text)}
+              className={`inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:shadow-cardHover ${bubbleClass(b)}`}
             >
-              <div
-                className={`pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-gradient-to-br ${ACCENT_MAP[u.accent]} blur-2xl`}
-              />
-              <h3 className="text-xl font-semibold tracking-tight text-ink-900">
-                {u.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-500">
-                {u.body}
-              </p>
-              <div className="mt-5 inline-flex items-center text-sm font-semibold text-ink-900">
-                Open with topic
-                <span
-                  aria-hidden
-                  className="ml-2 transition group-hover:translate-x-0.5"
-                >
-                  →
-                </span>
-              </div>
+              {b.text}
             </Link>
           ))}
         </div>
       </section>
 
-      {/* Vibe showcase */}
-      <section className="mb-16">
-        <div className="mb-6">
-          <h2 className="text-3xl font-semibold tracking-tight text-ink-900">
-            Pick the mood.
-          </h2>
-          <p className="mt-2 text-base text-ink-500">
-            Four vibes. Each one changes the word choice, pacing, and energy.
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {VIBE_SHOWCASE.map((v) => (
+      {/* Support features */}
+      <section className="mb-12">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {SUPPORT_FEATURES.map((f) => (
             <div
-              key={v.label}
+              key={f.label}
               className="rounded-3xl bg-white/70 p-5 ring-1 ring-slate-200/70 transition hover:shadow-card"
             >
-              <span
-                className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${v.accent}`}
-              >
-                {v.label}
-              </span>
-              <p className="mt-3 text-sm leading-relaxed text-ink-500">
-                {v.body}
-              </p>
+              <span className={`chip ${f.chip} mb-3`}>{f.label}</span>
+              <p className="text-sm leading-relaxed text-ink-500">{f.body}</p>
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* Explainers */}
-      <section className="mb-16">
-        <div className="mb-6">
-          <h2 className="text-3xl font-semibold tracking-tight text-ink-900">
-            Go from idea to episode.
-          </h2>
-          <p className="mt-2 text-base text-ink-500">
-            Four ways flip.audio is built for fast, joyful creation.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          {EXPLAINERS.map((e) => (
-            <div
-              key={e.label}
-              className="rounded-3xl bg-white/70 p-5 ring-1 ring-slate-200/70"
-            >
-              <span className={`chip ${e.chip} mb-3`}>{e.label}</span>
-              <p className="text-sm leading-relaxed text-ink-500">{e.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="mb-12">
-        <div className="relative overflow-hidden rounded-[40px] bg-white/70 p-10 ring-1 ring-slate-200/70 md:p-14">
-          <div className="pointer-events-none absolute inset-0 bg-brand-gradient-soft" />
-          <div className="relative grid grid-cols-1 items-center gap-8 md:grid-cols-[minmax(0,1fr)_auto]">
-            <div>
-              <h2 className="text-4xl font-semibold tracking-tight text-ink-900">
-                Your player is also your editor.
-              </h2>
-              <p className="mt-3 max-w-xl text-base text-ink-500">
-                Hit generate. Hear the intro while the rest produces. Remix
-                with one tap. No forms, no files, no queue.
-              </p>
-            </div>
-            <Link
-              href={studioHref()}
-              className="inline-flex h-14 items-center rounded-full bg-brand-gradient px-8 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
-            >
-              Start a flip
-            </Link>
-          </div>
         </div>
       </section>
 
       <footer className="border-t border-slate-200/70 pt-6 text-xs text-ink-400">
         <span>flip.audio — on-demand podcasts, one topic at a time.</span>
       </footer>
-    </div>
-  );
-}
-
-function PreviewCard() {
-  return (
-    <div className="glass relative overflow-hidden rounded-[32px] p-6 shadow-cardHover">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="chip chip-sky">Preview</span>
-          <span className="chip chip-mint">~7 min</span>
-        </div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-          Live
-        </span>
-      </div>
-
-      <div className="mb-5">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-          Scene 1
-        </div>
-        <div className="mt-1 text-xl font-semibold tracking-tight text-ink-900">
-          Why is matcha suddenly everywhere?
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70">
-        <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-gradient shadow-glow">
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M7 5v14l12-7-12-7z" fill="white" />
-            </svg>
-          </span>
-          <div className="flex-1">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200/70">
-              <div className="h-full w-[42%] rounded-full bg-brand-gradient" />
-            </div>
-            <div className="mt-2 flex justify-between text-[11px] font-medium text-ink-400">
-              <span>2:58</span>
-              <span>7:08</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-sky-50 p-3 ring-1 ring-sky-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-600">
-            Format
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">Panel</div>
-        </div>
-        <div className="rounded-xl bg-pink-50 p-3 ring-1 ring-pink-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-            Vibe
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">
-            Playful
-          </div>
-        </div>
-        <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-600">
-            Voices
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">3</div>
-        </div>
-      </div>
     </div>
   );
 }

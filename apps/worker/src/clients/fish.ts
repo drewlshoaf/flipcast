@@ -36,31 +36,12 @@ function clampSpeed(speed: number | undefined): number | undefined {
   return Math.min(2.0, Math.max(0.5, speed));
 }
 
-export async function synthesizeWithFish(
-  text: string,
-  voice: VoiceOption,
-  engine: TtsEngine,
-  speed?: number,
+async function fishTtsRequest(
+  body: Record<string, unknown>,
 ): Promise<Buffer> {
   if (!env.fishAudioApiKey) {
     throw new Error("FISH_AUDIO is not set; cannot synthesize with Fish Audio.");
   }
-  if (engine !== "fish") {
-    throw new Error(`Fish client received unsupported engine "${engine}".`);
-  }
-
-  const body: Record<string, unknown> = {
-    text,
-    reference_id: resolveProviderVoiceId(voice),
-    model: DEFAULT_MODEL,
-    format: "mp3",
-    mp3_bitrate: 128,
-  };
-  const clampedSpeed = clampSpeed(speed);
-  if (clampedSpeed != null) {
-    body.prosody = { speed: clampedSpeed };
-  }
-
   await acquireSlot();
   try {
     const res = await fetch(FISH_ENDPOINT, {
@@ -82,4 +63,52 @@ export async function synthesizeWithFish(
   } finally {
     releaseSlot();
   }
+}
+
+export async function synthesizeWithFish(
+  text: string,
+  voice: VoiceOption,
+  engine: TtsEngine,
+  speed?: number,
+): Promise<Buffer> {
+  if (engine !== "fish") {
+    throw new Error(`Fish client received unsupported engine "${engine}".`);
+  }
+  const body: Record<string, unknown> = {
+    text,
+    reference_id: resolveProviderVoiceId(voice),
+    model: DEFAULT_MODEL,
+    format: "mp3",
+    mp3_bitrate: 128,
+  };
+  const clampedSpeed = clampSpeed(speed);
+  if (clampedSpeed != null) body.prosody = { speed: clampedSpeed };
+  return fishTtsRequest(body);
+}
+
+/**
+ * Multi-speaker synthesis (Fish S2 Pro only). `text` must use the
+ * `<|speaker:N|>` tokens to switch voices; `voices[N]` is the reference
+ * voice for speaker N.
+ */
+export async function synthesizeWithFishMulti(
+  text: string,
+  voices: VoiceOption[],
+  speed?: number,
+): Promise<Buffer> {
+  if (voices.length < 2) {
+    throw new Error(
+      `synthesizeWithFishMulti needs at least 2 voices (got ${voices.length}); use synthesizeWithFish for single-speaker.`,
+    );
+  }
+  const body: Record<string, unknown> = {
+    text,
+    reference_id: voices.map((v) => resolveProviderVoiceId(v)),
+    model: DEFAULT_MODEL,
+    format: "mp3",
+    mp3_bitrate: 128,
+  };
+  const clampedSpeed = clampSpeed(speed);
+  if (clampedSpeed != null) body.prosody = { speed: clampedSpeed };
+  return fishTtsRequest(body);
 }
