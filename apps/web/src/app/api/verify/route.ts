@@ -37,9 +37,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, alreadyVerified: true });
   }
 
-  const row = await db.query.emailVerificationCodes.findFirst({
-    where: eq(emailVerificationCodes.userId, user.id),
-  });
+  const [row] = await db
+    .select()
+    .from(emailVerificationCodes)
+    .where(eq(emailVerificationCodes.userId, user.id))
+    .limit(1);
   if (!row) {
     return NextResponse.json(
       { error: "No active code. Request a new one." },
