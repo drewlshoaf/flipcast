@@ -138,10 +138,9 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
 
-        {/* Ad promo + preview stack */}
+        {/* Ad promo */}
         <div>
           <AdPromoCard />
-          <PreviewCard />
         </div>
       </section>
 
@@ -271,69 +270,3 @@ export function HomePage({ sessionUser }: HomePageProps) {
   );
 }
 
-function PreviewCard() {
-  return (
-    <div className="glass relative overflow-hidden rounded-[32px] p-6 shadow-cardHover">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="chip chip-sky">Preview</span>
-          <span className="chip chip-mint">~7 min</span>
-        </div>
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-          Live
-        </span>
-      </div>
-
-      <div className="mb-5">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-          Scene 1
-        </div>
-        <div className="mt-1 text-xl font-semibold tracking-tight text-ink-900">
-          Why is matcha suddenly everywhere?
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70">
-        <div className="flex items-center gap-4">
-          <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-gradient shadow-glow">
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M7 5v14l12-7-12-7z" fill="white" />
-            </svg>
-          </span>
-          <div className="flex-1">
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200/70">
-              <div className="h-full w-[42%] rounded-full bg-brand-gradient" />
-            </div>
-            <div className="mt-2 flex justify-between text-[11px] font-medium text-ink-400">
-              <span>2:58</span>
-              <span>7:08</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-sky-50 p-3 ring-1 ring-sky-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-sky-600">
-            Format
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">Panel</div>
-        </div>
-        <div className="rounded-xl bg-pink-50 p-3 ring-1 ring-pink-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-            Vibe
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">
-            Playful
-          </div>
-        </div>
-        <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-600">
-            Voices
-          </div>
-          <div className="mt-1 text-sm font-semibold text-ink-900">3</div>
-        </div>
-      </div>
-    </div>
-  );
-}
