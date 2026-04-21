@@ -135,6 +135,26 @@ const VIBE_ACCENTS: Record<
     ring: "ring-emerald-300",
     bg: "bg-emerald-50/50",
   },
+  sarcastic: {
+    chip: "bg-amber-100 text-amber-700",
+    ring: "ring-amber-300",
+    bg: "bg-amber-50/50",
+  },
+  curious: {
+    chip: "bg-cyan-100 text-cyan-700",
+    ring: "ring-cyan-300",
+    bg: "bg-cyan-50/50",
+  },
+  irreverent: {
+    chip: "bg-fuchsia-100 text-fuchsia-700",
+    ring: "ring-fuchsia-300",
+    bg: "bg-fuchsia-50/50",
+  },
+  nostalgic: {
+    chip: "bg-rose-100 text-rose-700",
+    ring: "ring-rose-300",
+    bg: "bg-rose-50/50",
+  },
 };
 
 interface StudioClientProps {
@@ -558,13 +578,16 @@ export function StudioClient({
               className="w-full resize-none rounded-2xl bg-white/80 px-5 py-4 text-lg leading-snug text-ink-900 outline-none ring-1 ring-slate-200 transition placeholder:text-ink-300 focus:ring-2 focus:ring-sky-300"
             />
 
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+                Randomize
+              </span>
               {TOPIC_HELPERS.map((h) => (
                 <button
                   key={h.label}
                   type="button"
                   onClick={() => setTopic(pickRandom(h.prompts))}
-                  title={`Drop a random ${h.label.toLowerCase()} into the topic`}
+                  title={`Randomize a ${h.label.toLowerCase()} into the topic`}
                   className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
                 >
                   <span aria-hidden>✨</span> {h.label}

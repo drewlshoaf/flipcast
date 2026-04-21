@@ -156,6 +156,10 @@ export const AVAILABLE_VIBES = [
   { id: "playful", label: "Playful", description: "Bright and witty." },
   { id: "dramatic", label: "Dramatic", description: "Tense and cinematic." },
   { id: "cozy", label: "Cozy", description: "Warm and easygoing." },
+  { id: "sarcastic", label: "Sarcastic", description: "Dry and cutting." },
+  { id: "curious", label: "Curious", description: "Inquisitive and probing." },
+  { id: "irreverent", label: "Irreverent", description: "Unserious and subversive." },
+  { id: "nostalgic", label: "Nostalgic", description: "Warm and looking back." },
 ] as const;
 
 export type FlipcastVibe = (typeof AVAILABLE_VIBES)[number]["id"];
