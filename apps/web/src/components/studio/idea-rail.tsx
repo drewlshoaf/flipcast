@@ -114,7 +114,8 @@ export function IdeaRail({ onSelect }: Props) {
 
       <div className="flex flex-col gap-5">
         {CATEGORIES.map((cat) => {
-          const list = (ideas?.[cat.key] as string[] | undefined) ?? [];
+          const all = (ideas?.[cat.key] as string[] | undefined) ?? [];
+          const list = all.slice(0, 3);
           const accent = ACCENT_CLASSES[cat.accent];
           return (
             <section key={cat.key}>
@@ -133,7 +134,7 @@ export function IdeaRail({ onSelect }: Props) {
               </p>
               <ul className="flex flex-col gap-1.5">
                 {loading && list.length === 0
-                  ? Array.from({ length: 6 }).map((_, i) => (
+                  ? Array.from({ length: 3 }).map((_, i) => (
                       <li
                         key={i}
                         className="h-9 animate-pulse-soft rounded-xl bg-white/60 ring-1 ring-slate-100"

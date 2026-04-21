@@ -64,50 +64,25 @@ const VIBE_ACCENTS: Record<
   string,
   { chip: string; ring: string; bg: string }
 > = {
-  sincere: {
-    chip: "bg-teal-100 text-teal-700",
-    ring: "ring-teal-300",
-    bg: "bg-teal-50/50",
-  },
-  serious: {
-    chip: "bg-sky-100 text-sky-700",
-    ring: "ring-sky-300",
-    bg: "bg-sky-50/50",
+  curious: {
+    chip: "bg-cyan-100 text-cyan-700",
+    ring: "ring-cyan-300",
+    bg: "bg-cyan-50/50",
   },
   playful: {
     chip: "bg-pink-100 text-pink-700",
     ring: "ring-pink-300",
     bg: "bg-pink-50/50",
   },
-  dramatic: {
-    chip: "bg-violet-100 text-violet-700",
-    ring: "ring-violet-300",
-    bg: "bg-violet-50/50",
+  sincere: {
+    chip: "bg-teal-100 text-teal-700",
+    ring: "ring-teal-300",
+    bg: "bg-teal-50/50",
   },
-  cozy: {
+  relaxed: {
     chip: "bg-emerald-100 text-emerald-700",
     ring: "ring-emerald-300",
     bg: "bg-emerald-50/50",
-  },
-  sarcastic: {
-    chip: "bg-amber-100 text-amber-700",
-    ring: "ring-amber-300",
-    bg: "bg-amber-50/50",
-  },
-  curious: {
-    chip: "bg-cyan-100 text-cyan-700",
-    ring: "ring-cyan-300",
-    bg: "bg-cyan-50/50",
-  },
-  irreverent: {
-    chip: "bg-fuchsia-100 text-fuchsia-700",
-    ring: "ring-fuchsia-300",
-    bg: "bg-fuchsia-50/50",
-  },
-  nostalgic: {
-    chip: "bg-rose-100 text-rose-700",
-    ring: "ring-rose-300",
-    bg: "bg-rose-50/50",
   },
 };
 
@@ -132,7 +107,7 @@ export function StudioClient({
 }: StudioClientProps) {
   const [topic, setTopic] = useState(initialTopic);
   const [format, setFormat] = useState<FlipcastFormat>(initialFormat ?? "panel");
-  const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "serious");
+  const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "curious");
   const autoStartFiredRef = useRef(false);
 
   // Engine is admin-controlled via FLIPAUDIO_DEFAULT_ENGINE; only override if

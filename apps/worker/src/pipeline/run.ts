@@ -49,7 +49,7 @@ export async function runPipeline(requestId: string): Promise<void> {
   try {
     const engineChoice = (request.engine ?? "fish") as TtsEngine;
     const format = (request.format ?? "panel") as FlipcastFormat;
-    const vibe = (request.vibe ?? "serious") as FlipcastVibe;
+    const vibe = (request.vibe ?? "curious") as FlipcastVibe;
     const cfg = formatConfig(format);
     const speed =
       typeof request.speed === "number" ? request.speed : env.defaultSpeed;
