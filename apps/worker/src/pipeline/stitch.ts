@@ -20,47 +20,45 @@ export async function stitchSegments(
 ): Promise<{ mp3: Buffer; durationMs: number }> {
   const workDir = await mkdtemp(join(tmpdir(), "flipcast-"));
   try {
-    // Collect every concatenable input (TTS segment and silence) in playback
-    // order. We pass them as separate -i files to ffmpeg, then stitch with
-    // the concat filter. This decodes + resamples each input to canonical
-    // params before encoding, which tolerates format drift between providers
-    // (e.g. Fish Audio vs ElevenLabs outputs) that the concat *demuxer*
-    // cannot — that mismatch was producing sporadic "libmp3lame exit -22
-    // (Invalid argument)" finalization failures.
-    const inputFiles: string[] = [];
+    // Two-pass stitch to work around libmp3lame's "-22 (Invalid argument) /
+    // 4 frames left in the queue on closing" on complex filter-graph output:
+    //   Pass 1: for each input (TTS segment and silence), run a standalone
+    //           ffmpeg call that decodes and re-encodes to canonical
+    //           44.1kHz/mono mp3. Each call is a clean single-input encode
+    //           that libmp3lame finalizes reliably.
+    //   Pass 2: concat demuxer with -c copy — pure frame-level splicing of
+    //           the (now identically-formatted) normalized mp3s. libmp3lame
+    //           isn't invoked, so no finalization failure is possible.
+    const normalized: string[] = [];
+    let i = 0;
     for (const seg of segments.sort((a, b) => a.index - b.index)) {
-      const segPath = join(workDir, `seg-${seg.index}.mp3`);
-      await writeFile(segPath, seg.buffer);
-      inputFiles.push(segPath);
+      const rawPath = join(workDir, `raw-${seg.index}.mp3`);
+      await writeFile(rawPath, seg.buffer);
+      normalized.push(await normalizeToCanonical(rawPath, workDir, i++));
       if (seg.pauseMsAfter > 0) {
-        const silencePath = join(workDir, `silence-${seg.index}.mp3`);
-        await generateSilence(silencePath, seg.pauseMsAfter);
-        inputFiles.push(silencePath);
+        const silenceRaw = join(workDir, `silence-raw-${seg.index}.mp3`);
+        await generateSilence(silenceRaw, seg.pauseMsAfter);
+        normalized.push(await normalizeToCanonical(silenceRaw, workDir, i++));
       }
     }
 
-    const outPath = join(workDir, "final.mp3");
-    const inputArgs = inputFiles.flatMap((p) => ["-i", p]);
-    // [0:a][1:a]...concat=n=N:v=0:a=1[out]
-    const filterComplex =
-      inputFiles.map((_, i) => `[${i}:a]`).join("") +
-      `concat=n=${inputFiles.length}:v=0:a=1[out]`;
+    const listPath = join(workDir, "concat.txt");
+    await writeFile(
+      listPath,
+      normalized.map((p) => `file '${p}'`).join("\n"),
+    );
 
+    const outPath = join(workDir, "final.mp3");
     await runFfmpeg([
       "-y",
-      ...inputArgs,
-      "-filter_complex",
-      filterComplex,
-      "-map",
-      "[out]",
-      "-ar",
-      String(OUTPUT_SAMPLE_RATE),
-      "-ac",
-      String(OUTPUT_CHANNELS),
-      "-codec:a",
-      "libmp3lame",
-      "-b:a",
-      "128k",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listPath,
+      "-c",
+      "copy",
       outPath,
     ]);
 
@@ -70,6 +68,29 @@ export async function stitchSegments(
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
+}
+
+async function normalizeToCanonical(
+  srcPath: string,
+  workDir: string,
+  index: number,
+): Promise<string> {
+  const outPath = join(workDir, `norm-${index}.mp3`);
+  await runFfmpeg([
+    "-y",
+    "-i",
+    srcPath,
+    "-ar",
+    String(OUTPUT_SAMPLE_RATE),
+    "-ac",
+    String(OUTPUT_CHANNELS),
+    "-c:a",
+    "libmp3lame",
+    "-b:a",
+    "128k",
+    outPath,
+  ]);
+  return outPath;
 }
 
 async function generateSilence(path: string, ms: number): Promise<void> {
