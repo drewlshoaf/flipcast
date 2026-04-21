@@ -20,25 +20,23 @@ const SETUP_MODEL = "claude-sonnet-4-6";
 const NEWSCAST_MODEL = "claude-sonnet-4-6";
 const SCENE_MODEL = "claude-sonnet-4-6";
 
-// Fish Audio S2 Pro accepts inline bracketed direction tags that shape delivery.
-// The synth reads these as performance cues — not speech — so tags never land as
-// literal audio. Reused across every prompt that produces spoken text.
+// Fish Audio S2 Pro accepts inline bracketed direction tags that shape
+// delivery. We're keeping guidance conservative for now — pacing + breath
+// only, no emotion/laughter/volume tags. Reused across every prompt that
+// produces spoken text.
 const FISH_TAG_GUIDANCE = [
   "",
-  "— VOICE DIRECTION (Fish Audio S2 Pro inline tags) —",
-  "Place bracketed performance tags inside the spoken text to shape delivery. Tags affect the phrase around them, not the whole turn, so drop them where the performance should change.",
-  "Core vocabulary (use these first):",
-  "  Pauses: [pause], [short pause]",
-  "  Breath: [inhale], [exhale], [sigh], [clearing throat]",
-  "  Laughter: [laughing], [chuckle], [chuckling]",
-  "  Emotions: [excited], [angry], [sad], [delight], [surprised], [shocked]",
-  "  Volume: [whisper], [low voice], [loud], [emphasis]",
-  "Also fine, when they fit the moment: [gasp], [long pause], [nervous], [scared], [confident], [sarcastic], [curious], [disappointed], [relieved], [hopeful], [annoyed], [dramatic], [monotone], [slow], [fast], [pitch up], [pitch down].",
+  "— PACING (Fish Audio S2 Pro inline tags) —",
+  "Place bracketed pacing tags inside the spoken text to shape delivery. The synth reads tags as performance cues, not speech, so they never land as literal audio.",
+  "Vocabulary (use ONLY these — do not invent others):",
+  "  [short pause]  — comma-level beat, mid-sentence",
+  "  [long pause]   — dramatic beat between ideas or before a punchline",
+  "  [breath]       — an audible inhale at a natural place",
   "Rules:",
-  "  1. One tag per turn is typical; at most two when stacking (e.g. `[whisper][nervous]`). More than that and delivery gets muddy.",
-  "  2. Not every turn needs a tag. Use them where they meaningfully change delivery; let plain lines stay plain.",
-  "  3. Match tags to the vibe — serious stays restrained, playful uses more laughter / delight, dramatic leans on [gasp] / [whisper] / [shocked] / [dramatic].",
-  "  4. Lowercase and exact spelling matter: `[laughing]` and `[laugh]` are NOT the same tag. Stick to the vocabulary above.",
+  "  1. Use sparingly — 0–2 tags per turn. Most turns should have zero. Overuse makes delivery feel robotic.",
+  "  2. Place tags at natural breath points: between clauses, before a reveal, after a hard stop. Not inside a single clause.",
+  "  3. Lowercase and exact spelling matter. Stick to the three tags above.",
+  "  4. No emotion/laughter/volume tags (no [excited], [laughing], [whisper], etc.) — we'll enable those later.",
   "  5. Never use the multi-speaker syntax `<|speaker:N|>` — each turn is synthesized on its own voice.",
   "  6. Do NOT tag the verbatim ad-break transition line or the verbatim sign-off line. Leave those clean.",
 ].join("\n");
