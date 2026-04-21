@@ -100,22 +100,33 @@ const VIBE_ACCENTS: Record<
 interface StudioClientProps {
   defaultSpeed: number;
   initialTopic?: string;
+  initialFormat?: FlipcastFormat;
+  initialVibe?: FlipcastVibe;
+  initialEngine?: VoiceEngine;
+  autoStart?: boolean;
   sessionUser: SessionUser | null;
 }
 
 export function StudioClient({
   defaultSpeed,
   initialTopic = "",
+  initialFormat,
+  initialVibe,
+  initialEngine,
+  autoStart,
   sessionUser,
 }: StudioClientProps) {
   const [topic, setTopic] = useState(initialTopic);
-  const [format, setFormat] = useState<FlipcastFormat>("panel");
-  const [vibe, setVibe] = useState<FlipcastVibe>("serious");
+  const [format, setFormat] = useState<FlipcastFormat>(initialFormat ?? "panel");
+  const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "serious");
   const [speed, setSpeed] = useState<number>(defaultSpeed);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("auto");
-  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine>("elevenlabs");
+  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine>(
+    initialEngine ?? "elevenlabs",
+  );
   const [pickedVoices, setPickedVoices] = useState<string[]>([]);
   const [showSecondary, setShowSecondary] = useState(false);
+  const autoStartFiredRef = useRef(false);
 
   const lengthMinutes = lengthPreset("long").minutes;
   const cfg = formatConfig(format);
@@ -262,10 +273,18 @@ export function StudioClient({
       );
       return;
     }
-    // Gate first generation behind signup. Preserve the topic across the
-    // round trip so the user lands back in Studio with their work intact.
+    // Gate first generation behind signup. Preserve topic/format/vibe/engine
+    // so the user lands back in Studio with their work intact, and set
+    // auto=1 so the next page load fires Generate automatically.
     if (!sessionUser) {
-      const next = `/studio?topic=${encodeURIComponent(topic.trim())}`;
+      const params = new URLSearchParams({
+        topic: topic.trim(),
+        format,
+        vibe,
+        engine: voiceEngine,
+        auto: "1",
+      });
+      const next = `/studio?${params.toString()}`;
       window.location.href = `/signup?next=${encodeURIComponent(next)}`;
       return;
     }
@@ -349,6 +368,21 @@ export function StudioClient({
     setError(null);
     setPlayback({ stage: "idle", index: 0 });
   }
+
+  // Auto-fire Generate once after a signup → /studio?auto=1 redirect, so the
+  // user doesn't have to click the button a second time. Ref guards against
+  // StrictMode double-mounts; we also strip the query so a refresh won't
+  // re-fire.
+  useEffect(() => {
+    if (!autoStart || !sessionUser || autoStartFiredRef.current) return;
+    if (!topic || topic.trim().length < 3) return;
+    autoStartFiredRef.current = true;
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", "/studio");
+    }
+    void submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStart, sessionUser, topic]);
 
   const hasStarted = Boolean(plan && requestId);
 
