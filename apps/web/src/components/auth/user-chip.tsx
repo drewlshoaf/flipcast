@@ -9,6 +9,7 @@ export interface SessionUser {
   name: string | null;
   email: string | null;
   image: string | null;
+  isAdmin?: boolean;
 }
 
 interface Props {
@@ -122,6 +123,15 @@ export function UserChip({ user, loginNext }: Props) {
           >
             Profile
           </Link>
+          {user.isAdmin && (
+            <Link
+              href="/admin/flipcasts"
+              onClick={() => setOpen(false)}
+              className="block rounded-xl px-3 py-2 text-sm font-semibold text-pink-600 transition hover:bg-white/70"
+            >
+              Admin
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => void signOut({ callbackUrl: "/" })}

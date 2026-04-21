@@ -24,6 +24,7 @@ export default async function ProfilePage() {
     name: row.name ?? null,
     email: row.email ?? null,
     image: row.image ?? null,
+    isAdmin: row.isAdmin ?? false,
   };
 
   return (

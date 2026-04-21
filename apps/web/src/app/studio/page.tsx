@@ -17,6 +17,7 @@ export default async function StudioPage({ searchParams }: StudioPageProps) {
         name: session.user.name ?? null,
         email: session.user.email ?? null,
         image: session.user.image ?? null,
+        isAdmin: session.user.isAdmin ?? false,
       }
     : null;
   return (

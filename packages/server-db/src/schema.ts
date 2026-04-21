@@ -49,6 +49,7 @@ export const users = pgTable("users", {
   image: text("image"),
   passwordHash: text("password_hash"),
   planTier: planTierEnum("plan_tier").notNull().default("free"),
+  isAdmin: boolean("is_admin").notNull().default(false),
   interests: text("interests").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -129,6 +130,7 @@ export const flipcastRequests = pgTable("flipcast_requests", {
   scene4AudioUrl: text("scene_4_audio_url"),
   transcriptVersion: integer("transcript_version"),
   errorMessage: text("error_message"),
+  claudeUsage: jsonb("claude_usage"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

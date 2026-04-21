@@ -6,6 +6,7 @@ import {
   AVAILABLE_VIBES,
   formatConfig,
   type Character,
+  type ClaudeCallUsage,
   type EpisodeSetup,
   type TranscriptTurn,
   type TtsEngine,
@@ -14,6 +15,34 @@ import {
   type FlipcastVibe,
   type SceneOutline,
 } from "@flipcast/types";
+
+const SETUP_MODEL = "claude-sonnet-4-6";
+const NEWSCAST_MODEL = "claude-sonnet-4-6";
+const SCENE_MODEL = "claude-sonnet-4-6";
+
+const ZERO_USAGE: ClaudeCallUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  cacheReadTokens: 0,
+  cacheCreationTokens: 0,
+};
+
+function extractUsage(response: Anthropic.Message): ClaudeCallUsage {
+  const u = response.usage as
+    | {
+        input_tokens?: number;
+        output_tokens?: number;
+        cache_read_input_tokens?: number | null;
+        cache_creation_input_tokens?: number | null;
+      }
+    | undefined;
+  return {
+    inputTokens: u?.input_tokens ?? 0,
+    outputTokens: u?.output_tokens ?? 0,
+    cacheReadTokens: u?.cache_read_input_tokens ?? 0,
+    cacheCreationTokens: u?.cache_creation_input_tokens ?? 0,
+  };
+}
 import { z } from "zod";
 import { env } from "../env";
 
@@ -320,7 +349,7 @@ export async function generateSetup(args: {
   engine: TtsEngine;
   outline: SceneOutline[];
   presetVoiceIds?: string[]; // if the user picked voices
-}): Promise<EpisodeSetup> {
+}): Promise<EpisodeSetup & { model: string; usage: ClaudeCallUsage }> {
   const cfg = formatConfig(args.format);
   const pool = voicesForEngine(args.engine);
   if (pool.length < cfg.castSize) {
@@ -330,7 +359,7 @@ export async function generateSetup(args: {
   }
 
   if (!env.anthropicApiKey) {
-    return stubSetup(args, pool);
+    return { ...stubSetup(args, pool), model: SETUP_MODEL, usage: ZERO_USAGE };
   }
 
   // Single-speaker formats use the solo tool.
@@ -379,13 +408,14 @@ export async function generateSetup(args: {
   ].join("\n");
 
   const response = await client().messages.create({
-    model: "claude-sonnet-4-6",
+    model: SETUP_MODEL,
     max_tokens: 3072,
     system,
     tools: [toolDef],
     tool_choice: { type: "tool", name: "emit_setup" },
     messages: [{ role: "user", content: `Topic: ${args.topic}` }],
   });
+  const usage = extractUsage(response);
 
   const block = response.content.find(
     (b) => b.type === "tool_use" && b.name === "emit_setup",
@@ -431,6 +461,8 @@ export async function generateSetup(args: {
     panelists,
     welcomeText: parsed.welcomeText,
     outline: args.outline,
+    model: SETUP_MODEL,
+    usage,
   };
 }
 
@@ -443,6 +475,8 @@ export async function generateFullNewscast(args: {
 }): Promise<{
   setup: EpisodeSetup;
   scenes: { sceneIndex: number; turns: TranscriptTurn[] }[];
+  model: string;
+  usage: ClaudeCallUsage;
 }> {
   const pool = voicesForEngine(args.engine);
   if (pool.length < 1) {
@@ -450,7 +484,11 @@ export async function generateFullNewscast(args: {
   }
 
   if (!env.anthropicApiKey) {
-    return stubFullNewscast(args, pool);
+    return {
+      ...stubFullNewscast(args, pool),
+      model: NEWSCAST_MODEL,
+      usage: ZERO_USAGE,
+    };
   }
 
   const scenesBrief = args.outline
@@ -493,13 +531,14 @@ export async function generateFullNewscast(args: {
   ].join("\n");
 
   const response = await client().messages.create({
-    model: "claude-sonnet-4-6",
+    model: NEWSCAST_MODEL,
     max_tokens: 6144,
     system,
     tools: [FULL_NEWSCAST_TOOL],
     tool_choice: { type: "tool", name: "emit_newscast" },
     messages: [{ role: "user", content: `Topic: ${args.topic}` }],
   });
+  const usage = extractUsage(response);
 
   const block = response.content.find(
     (b) => b.type === "tool_use" && b.name === "emit_newscast",
@@ -555,7 +594,7 @@ export async function generateFullNewscast(args: {
       })),
     }));
 
-  return { setup, scenes };
+  return { setup, scenes, model: NEWSCAST_MODEL, usage };
 }
 
 export async function generateScene(args: {
@@ -566,7 +605,7 @@ export async function generateScene(args: {
   format: FlipcastFormat;
   vibe: FlipcastVibe;
   priorScenesBrief?: string;
-}): Promise<{ turns: TranscriptTurn[] }> {
+}): Promise<{ turns: TranscriptTurn[]; model: string; usage: ClaudeCallUsage }> {
   const sceneOutline = args.setup.outline.find(
     (o) => o.sceneIndex === args.sceneIndex,
   );
@@ -580,7 +619,11 @@ export async function generateScene(args: {
   const useSolo = cfg.castSize === 1;
 
   if (!env.anthropicApiKey) {
-    return { turns: stubSceneTurns(args, targetSeconds, isFinal, useSolo) };
+    return {
+      turns: stubSceneTurns(args, targetSeconds, isFinal, useSolo),
+      model: SCENE_MODEL,
+      usage: ZERO_USAGE,
+    };
   }
 
   const castBrief = args.setup.panelists
@@ -654,7 +697,7 @@ export async function generateScene(args: {
   ].join("\n");
 
   const response = await client().messages.create({
-    model: "claude-sonnet-4-6",
+    model: SCENE_MODEL,
     max_tokens: 2048,
     system: [
       { type: "text", text: stableSystem, cache_control: { type: "ephemeral" } },
@@ -672,6 +715,7 @@ export async function generateScene(args: {
       },
     ],
   });
+  const usage = extractUsage(response);
 
   const block = response.content.find(
     (b) => b.type === "tool_use" && b.name === "emit_scene",
@@ -688,7 +732,7 @@ export async function generateScene(args: {
     pauseMsAfter: typeof t.pauseMsAfter === "number" ? t.pauseMsAfter : 150,
     isAd: false,
   }));
-  return { turns };
+  return { turns, model: SCENE_MODEL, usage };
 }
 
 // ---------- Stubs (used when ANTHROPIC_API_KEY is not set) ----------

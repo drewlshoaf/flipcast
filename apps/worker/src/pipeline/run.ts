@@ -9,9 +9,14 @@ import {
   VOICE_BY_ID,
   planSequence,
   formatConfig,
+  emptyClaudeUsage,
+  mergeClaudeUsage,
   type TtsEngine,
   type TtsProvider,
   type Character,
+  type ClaudeCallUsage,
+  type ClaudeUsageAggregate,
+  type EpisodeSetup,
   type TranscriptTurn,
   type SpeakerRole,
   type FlipcastFormat,
@@ -33,6 +38,7 @@ import { stitchSegments } from "./stitch";
 const CONCURRENCY_LIMIT: Record<TtsProvider, number> = {
   elevenlabs: 3,
   polly: 10,
+  fish: 5,
 };
 
 export async function runPipeline(requestId: string): Promise<void> {
@@ -79,8 +85,20 @@ export async function runPipeline(requestId: string): Promise<void> {
     // For solo formats (newscast) we generate the full script in a single
     // Claude call and cache the per-scene turns. For panel we keep per-scene
     // generation (with prompt caching) so each scene can react to the prior.
-    let setup: Awaited<ReturnType<typeof generateSetup>>;
+    let setup: EpisodeSetup;
     let preGeneratedScenes: Map<number, TranscriptTurn[]> | null = null;
+
+    let usageAgg: ClaudeUsageAggregate = emptyClaudeUsage();
+    const recordUsage = async (
+      model: string,
+      usage: ClaudeCallUsage,
+    ): Promise<void> => {
+      usageAgg = mergeClaudeUsage(usageAgg, model, usage);
+      await db
+        .update(flipcastRequests)
+        .set({ claudeUsage: usageAgg, updatedAt: new Date() })
+        .where(eq(flipcastRequests.id, requestId));
+    };
 
     if (cfg.castSize === 1) {
       const full = await generateFullNewscast({
@@ -94,8 +112,9 @@ export async function runPipeline(requestId: string): Promise<void> {
       preGeneratedScenes = new Map(
         full.scenes.map((s) => [s.sceneIndex, s.turns]),
       );
+      await recordUsage(full.model, full.usage);
     } else {
-      setup = await generateSetup({
+      const setupResult = await generateSetup({
         topic: request.topic,
         format,
         vibe,
@@ -103,6 +122,13 @@ export async function runPipeline(requestId: string): Promise<void> {
         outline,
         presetVoiceIds: usablePresetVoiceIds,
       });
+      setup = {
+        topicContext: setupResult.topicContext,
+        panelists: setupResult.panelists,
+        welcomeText: setupResult.welcomeText,
+        outline: setupResult.outline,
+      };
+      await recordUsage(setupResult.model, setupResult.usage);
     }
 
     const characters: Character[] = setup.panelists;
@@ -235,7 +261,11 @@ export async function runPipeline(requestId: string): Promise<void> {
 
     // Prefetch one scene ahead: while scene N's TTS/stitch/upload runs,
     // Claude generates scene N+1. Skipped for newscast (pre-generated).
-    let nextGenPromise: Promise<{ turns: TranscriptTurn[] }> | null = null;
+    let nextGenPromise: Promise<{
+      turns: TranscriptTurn[];
+      model: string;
+      usage: ClaudeCallUsage;
+    }> | null = null;
 
     for (let i = 0; i < sceneItems.length; i++) {
       const item = sceneItems[i]!;
@@ -250,23 +280,24 @@ export async function runPipeline(requestId: string): Promise<void> {
       let turns: TranscriptTurn[];
       if (preGenTurns) {
         turns = preGenTurns;
-      } else if (nextGenPromise) {
-        turns = (await nextGenPromise).turns;
-        nextGenPromise = null;
       } else {
-        const res = await generateScene({
-          topic: request.topic,
-          setup,
-          sceneIndex,
-          totalScenes: plan.totalScenes,
-          format,
-          vibe,
-          priorScenesBrief:
-            priorScenesBriefs.length > 0
-              ? priorScenesBriefs.join("\n")
-              : undefined,
-        });
+        const res = nextGenPromise
+          ? await nextGenPromise
+          : await generateScene({
+              topic: request.topic,
+              setup,
+              sceneIndex,
+              totalScenes: plan.totalScenes,
+              format,
+              vibe,
+              priorScenesBrief:
+                priorScenesBriefs.length > 0
+                  ? priorScenesBriefs.join("\n")
+                  : undefined,
+            });
+        nextGenPromise = null;
         turns = res.turns;
+        await recordUsage(res.model, res.usage);
       }
 
       allSceneTurns.push({ sceneIndex, turns });

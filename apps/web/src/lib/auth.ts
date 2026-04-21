@@ -15,7 +15,14 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      isAdmin?: boolean;
     };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    isAdmin?: boolean;
   }
 }
 
@@ -71,10 +78,21 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.sub = (user as { id: string }).id;
+      // Refresh isAdmin from DB each time the JWT is minted. Cheap (id-keyed
+      // lookup) and means admin toggles take effect on next request.
+      if (token.sub) {
+        const rows = await db
+          .select({ isAdmin: users.isAdmin })
+          .from(users)
+          .where(eq(users.id, token.sub))
+          .limit(1);
+        token.isAdmin = rows[0]?.isAdmin ?? false;
+      }
       return token;
     },
     async session({ session, token }) {
       if (token.sub && session.user) session.user.id = token.sub;
+      if (session.user) session.user.isAdmin = Boolean(token.isAdmin);
       return session;
     },
   },
@@ -82,4 +100,10 @@ export const authOptions: NextAuthOptions = {
 
 export function getSession() {
   return getServerSession(authOptions);
+}
+
+export async function requireAdmin() {
+  const session = await getSession();
+  if (!session?.user?.isAdmin) return null;
+  return session;
 }
