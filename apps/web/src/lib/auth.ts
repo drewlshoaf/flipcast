@@ -66,6 +66,9 @@ export const authOptions: NextAuthOptions = {
         if (!row || !row.passwordHash) return null;
         const ok = await bcrypt.compare(password, row.passwordHash);
         if (!ok) return null;
+        // Credentials accounts must verify their email before they can
+        // sign in. Google OAuth is exempt (Google already verified).
+        if (!row.emailVerified) return null;
         return {
           id: row.id,
           email: row.email,

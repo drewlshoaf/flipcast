@@ -34,17 +34,18 @@ export function SignupForm({ googleEnabled }: Props) {
         setError(data?.error ?? "Couldn't create the account.");
         return;
       }
-      const signin = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-      if (!signin || signin.error) {
-        setError("Account created. Try logging in.");
-        return;
+      // Stash the password in sessionStorage so the verify step can sign the
+      // user in without making them retype it. Cleared immediately on verify.
+      try {
+        window.sessionStorage.setItem(
+          "flipcast:pending_pw",
+          JSON.stringify({ email, password }),
+        );
+      } catch {
+        /* incognito / quota — form on /verify will ask for password */
       }
-      router.push(next);
-      router.refresh();
+      const qs = new URLSearchParams({ email, next });
+      router.push(`/verify?${qs.toString()}`);
     } finally {
       setSubmitting(false);
     }

@@ -74,6 +74,21 @@ export const ads = pgTable("ads", {
     .defaultNow(),
 });
 
+// One active code per user at a time (upsert on signup/resend). Stores a
+// bcrypt hash of the 6-digit code; plaintext is only logged to stdout so the
+// operator can fetch it in dev.
+export const emailVerificationCodes = pgTable("email_verification_codes", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  codeHash: text("code_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Auth.js account linkage — one row per OAuth provider account connected to a user.
 export const accounts = pgTable(
   "accounts",

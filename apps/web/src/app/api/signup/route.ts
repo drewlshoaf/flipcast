@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { users } from "@flipcast/server-db";
 import { db } from "@/lib/db";
+import { issueVerificationCode } from "@/lib/verification";
 
 export const runtime = "nodejs";
 
@@ -58,5 +59,17 @@ export async function POST(req: Request) {
     .values({ email, passwordHash, name: name ?? undefined })
     .returning({ id: users.id });
 
-  return NextResponse.json({ id: row?.id ?? null }, { status: 201 });
+  if (!row) {
+    return NextResponse.json(
+      { error: "Failed to create account." },
+      { status: 500 },
+    );
+  }
+
+  await issueVerificationCode(row.id, email);
+
+  return NextResponse.json(
+    { id: row.id, requiresVerification: true },
+    { status: 201 },
+  );
 }
