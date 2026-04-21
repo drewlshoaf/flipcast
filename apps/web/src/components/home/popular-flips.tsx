@@ -22,7 +22,7 @@ function timeAgo(iso: string): string {
   return `${d}d ago`;
 }
 
-export function PopularFlips() {
+export function PopularFlips({ className = "" }: { className?: string }) {
   const [items, setItems] = useState<Item[] | null>(null);
 
   useEffect(() => {
@@ -41,7 +41,9 @@ export function PopularFlips() {
   }, []);
 
   return (
-    <div className="glass flex h-full min-h-0 flex-col overflow-hidden rounded-[32px] p-5 shadow-card">
+    <div
+      className={`glass flex min-h-0 flex-col overflow-hidden rounded-[32px] p-5 shadow-card ${className}`}
+    >
       <div className="mb-3 flex items-center justify-between">
         <span className="chip chip-sky">Popular flips</span>
         {items && (

@@ -139,13 +139,13 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
 
-        {/* Ad promo + popular flips stack. flex-col + flex-1 on the bottom
-            card so the list grows to match the left column's height. */}
-        <div className="flex flex-col gap-4">
+        {/* Ad promo + popular flips stack. Forced full-height flex column
+            so PopularFlips can flex-1 into the remaining space and
+            terminate exactly at the bottom of the What's on your mind
+            tile (which is the tallest left-column child). */}
+        <div className="flex h-full flex-col gap-4">
           <AdPromoCard />
-          <div className="min-h-0 flex-1">
-            <PopularFlips />
-          </div>
+          <PopularFlips className="min-h-0 flex-1" />
         </div>
       </section>
 
