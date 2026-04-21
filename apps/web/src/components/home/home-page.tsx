@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
+import { AdPromoCard } from "@/components/home/ad-promo-card";
 
 const PROMPT_CHIPS = [
   "Why is matcha everywhere now?",
@@ -172,8 +173,11 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
 
-        {/* Preview card */}
-        <PreviewCard />
+        {/* Ad promo + preview stack */}
+        <div>
+          <AdPromoCard />
+          <PreviewCard />
+        </div>
       </section>
 
       {/* Use cases */}
