@@ -161,6 +161,15 @@ services:
       - ./packages/queue/src:/app/packages/queue/src
 
 volumes:
+  # Declared external so the renamed project (flipaudio) attaches to the
+  # data already persisted under the old `flipcast` project prefix —
+  # users, generated audio, BullMQ queue state all survive the rebrand.
   postgres_data:
+    external: true
+    name: flipcast_postgres_data
   redis_data:
+    external: true
+    name: flipcast_redis_data
   minio_data:
+    external: true
+    name: flipcast_minio_data
