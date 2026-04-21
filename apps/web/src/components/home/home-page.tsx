@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 import { HeroComposer } from "@/components/home/hero-composer";
+import { PopularFlips } from "@/components/home/popular-flips";
 
 const USE_CASES = [
   {
@@ -138,9 +139,10 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
 
-        {/* Ad promo */}
+        {/* Ad promo + popular flips stack */}
         <div>
           <AdPromoCard />
+          <PopularFlips />
         </div>
       </section>
 

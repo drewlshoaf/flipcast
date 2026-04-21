@@ -62,10 +62,15 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
+        "roll-in": {
+          "0%": { opacity: "0", transform: "translateY(10px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "shimmer-bar": "shimmer-bar 1.8s linear infinite",
+        "roll-in": "roll-in 360ms ease-out both",
       },
     },
   },
