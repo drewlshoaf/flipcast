@@ -128,6 +128,7 @@ export const UI_FORMATS: {
 ];
 
 export const AVAILABLE_VIBES = [
+  { id: "sincere", label: "Sincere", description: "Earnest and direct." },
   { id: "serious", label: "Serious", description: "Measured and weighty." },
   { id: "playful", label: "Playful", description: "Bright and witty." },
   { id: "dramatic", label: "Dramatic", description: "Tense and cinematic." },

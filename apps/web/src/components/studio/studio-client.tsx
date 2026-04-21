@@ -64,6 +64,11 @@ const VIBE_ACCENTS: Record<
   string,
   { chip: string; ring: string; bg: string }
 > = {
+  sincere: {
+    chip: "bg-teal-100 text-teal-700",
+    ring: "ring-teal-300",
+    bg: "bg-teal-50/50",
+  },
   serious: {
     chip: "bg-sky-100 text-sky-700",
     ring: "ring-sky-300",

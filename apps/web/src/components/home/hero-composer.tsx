@@ -4,18 +4,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopicComposer } from "@/components/topic-composer";
 
-type Step = "topic" | "vibe";
+type Step = "topic" | "vibe" | "format";
 
-// Four headline vibes shown on the home step-2. Matches the first four entries
-// of AVAILABLE_VIBES in @flipaudio/types so the labels read the same in Studio
-// and home. (Kept local to avoid dragging the whole types package into a
-// hero-only client component.)
-const HOME_VIBES: { id: string; label: string; description: string; accent: string }[] = [
+interface Choice {
+  id: string;
+  label: string;
+  description: string;
+  accent: string;
+}
+
+// Four headline vibes shown on home step 2. Each is an id from
+// AVAILABLE_VIBES in @flipaudio/types; labels/descriptions are inlined here
+// so we don't drag the whole types package into a home-only client bundle.
+const HOME_VIBES: Choice[] = [
   {
-    id: "serious",
-    label: "Serious",
-    description: "Measured and weighty.",
-    accent: "bg-sky-50 text-sky-700 ring-sky-200 hover:ring-sky-300",
+    id: "sincere",
+    label: "Sincere",
+    description: "Earnest and direct.",
+    accent: "bg-teal-50 text-teal-700 ring-teal-200 hover:ring-teal-300",
   },
   {
     id: "playful",
@@ -30,36 +36,60 @@ const HOME_VIBES: { id: string; label: string; description: string; accent: stri
     accent: "bg-violet-50 text-violet-700 ring-violet-200 hover:ring-violet-300",
   },
   {
-    id: "cozy",
-    label: "Cozy",
-    description: "Warm and easygoing.",
-    accent: "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:ring-emerald-300",
+    id: "curious",
+    label: "Curious",
+    description: "Inquisitive and probing.",
+    accent: "bg-cyan-50 text-cyan-700 ring-cyan-200 hover:ring-cyan-300",
+  },
+];
+
+// Matches AVAILABLE_FORMATS ids in @flipaudio/types. Only the two enabled
+// formats are offered on the home flow (Story is still "coming soon").
+const HOME_FORMATS: Choice[] = [
+  {
+    id: "panel",
+    label: "Panel",
+    description: "Three voices. Contrast and debate.",
+    accent: "bg-sky-50 text-sky-700 ring-sky-200 hover:ring-sky-300",
+  },
+  {
+    id: "newscast",
+    label: "Anchor",
+    description: "One host. Clean news delivery.",
+    accent: "bg-pink-50 text-pink-700 ring-pink-200 hover:ring-pink-300",
   },
 ];
 
 export function HeroComposer() {
   const [step, setStep] = useState<Step>("topic");
   const [topic, setTopic] = useState("");
+  const [vibe, setVibe] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   const trimmed = topic.trim();
-  const canAdvance = trimmed.length >= 3 && !submitting;
+  const canAdvanceTopic = trimmed.length >= 3 && !submitting;
 
-  function goToVibe() {
-    if (!canAdvance) return;
+  function toVibe() {
+    if (!canAdvanceTopic) return;
     setStep("vibe");
   }
 
-  function pickVibe(vibeId: string) {
+  function toFormat(vibeId: string) {
     if (submitting) return;
+    setVibe(vibeId);
+    setStep("format");
+  }
+
+  function pickFormat(formatId: string) {
+    if (submitting || !vibe) return;
     setSubmitting(true);
-    // Hand off to the Studio with topic + vibe prefilled and auto=1 so the
-    // Studio's existing auto-start flow fires Generate on arrival. For
-    // anonymous users the signup gate intercepts and then resumes here.
+    // Hand off to the Studio with topic + vibe + format prefilled and auto=1
+    // so the Studio's existing auto-start flow fires Generate on arrival.
     const qs = new URLSearchParams({
       topic: trimmed,
-      vibe: vibeId,
+      vibe,
+      format: formatId,
       auto: "1",
     });
     router.push(`/studio?${qs.toString()}`);
@@ -73,8 +103,8 @@ export function HeroComposer() {
         actionButton={
           <button
             type="button"
-            onClick={goToVibe}
-            disabled={!canAdvance}
+            onClick={toVibe}
+            disabled={!canAdvanceTopic}
             className="w-full rounded-full bg-brand-gradient px-6 py-4 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Make this flip
@@ -84,39 +114,50 @@ export function HeroComposer() {
     );
   }
 
-  // step === "vibe"
+  const isVibe = step === "vibe";
+  const choices = isVibe ? HOME_VIBES : HOME_FORMATS;
+  const stepLabel = isVibe ? "step 2 · vibe" : "step 3 · format";
+  const heading = isVibe ? "Pick a vibe" : "Pick a format";
+  const onPick = isVibe ? toFormat : pickFormat;
+  const back = isVibe
+    ? { label: "Change topic", onClick: () => setStep("topic") }
+    : { label: "Change vibe", onClick: () => setStep("vibe") };
+
   return (
     <section className="glass rounded-[32px] p-7 shadow-card">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <button
             type="button"
-            onClick={() => setStep("topic")}
+            onClick={back.onClick}
             className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-ink-500 transition hover:text-ink-900"
           >
-            <span aria-hidden>←</span> Change topic
+            <span aria-hidden>←</span> {back.label}
           </button>
           <h2 className="text-2xl font-semibold tracking-tight text-ink-900">
-            Pick a vibe
+            {heading}
           </h2>
           <p className="mt-1 line-clamp-2 text-sm text-ink-500">
             &ldquo;{trimmed}&rdquo;
+            {vibe && !isVibe ? ` · ${vibe}` : ""}
           </p>
         </div>
-        <span className="chip chip-pink hidden md:inline-flex">step 2</span>
+        <span className="chip chip-pink hidden whitespace-nowrap md:inline-flex">
+          {stepLabel}
+        </span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {HOME_VIBES.map((v) => (
+        {choices.map((c) => (
           <button
-            key={v.id}
+            key={c.id}
             type="button"
-            onClick={() => pickVibe(v.id)}
+            onClick={() => onPick(c.id)}
             disabled={submitting}
-            className={`rounded-2xl p-4 text-left ring-1 transition hover:shadow-card disabled:cursor-not-allowed disabled:opacity-60 ${v.accent}`}
+            className={`rounded-2xl p-4 text-left ring-1 transition hover:shadow-card disabled:cursor-not-allowed disabled:opacity-60 ${c.accent}`}
           >
-            <div className="text-base font-semibold">{v.label}</div>
-            <div className="mt-1 text-xs opacity-80">{v.description}</div>
+            <div className="text-base font-semibold">{c.label}</div>
+            <div className="mt-1 text-xs opacity-80">{c.description}</div>
           </button>
         ))}
       </div>
