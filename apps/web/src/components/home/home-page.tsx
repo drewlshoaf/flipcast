@@ -145,7 +145,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
               href={studioHref()}
               className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              Start a flip.audio
+              Start a flip
             </Link>
             <Link
               href={studioHref()}
@@ -293,7 +293,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
               href={studioHref()}
               className="inline-flex h-14 items-center rounded-full bg-brand-gradient px-8 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              Start a flip.audio
+              Start a flip
             </Link>
           </div>
         </div>
