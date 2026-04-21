@@ -18,6 +18,11 @@ export const env = {
     process.env.ELEVENLABS_MAX_CONCURRENT,
     3,
   ),
+  fishAudioApiKey: process.env.FISH_AUDIO ?? "",
+  fishAudioMaxConcurrent: parsePositiveInt(
+    process.env.FISH_AUDIO_MAX_CONCURRENT,
+    5,
+  ),
   defaultSpeed: parseSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
 };
 

@@ -71,5 +71,7 @@ export const createRequestSchema = z.object({
   lengthMinutes: z.number().min(MIN_LENGTH_MINUTES).max(MAX_LENGTH_MINUTES),
   voiceIds: z.array(z.string().min(1)).optional(),
   speed: z.number().min(MIN_SPEED).max(MAX_SPEED).optional(),
+  // User-selectable voice provider. Overrides the format's default engine.
+  engine: z.enum(["elevenlabs", "fish"]).optional(),
 });
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;

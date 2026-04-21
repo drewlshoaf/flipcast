@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AVAILABLE_FORMATS,
   AVAILABLE_VIBES,
-  ELEVENLABS_VOICES,
   MIN_SPEED,
   MAX_SPEED,
   SPEED_STEP,
   UI_FORMATS,
+  VOICES,
   formatConfig,
   lengthPreset,
   type FlipcastFormat,
@@ -25,7 +24,6 @@ import type {
   TranscriptTurn,
 } from "@flipcast/types";
 import { IdeaRail } from "./idea-rail";
-import { PreviewPlayer } from "./preview-player";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 
 const ROLE_LABEL: Record<Character["role"], string> = {
@@ -35,6 +33,7 @@ const ROLE_LABEL: Record<Character["role"], string> = {
 };
 
 type VoiceMode = "auto" | "pick";
+type VoiceEngine = "elevenlabs" | "fish";
 type PlaybackStage = "idle" | "playing" | "waiting" | "finished";
 
 const TOPIC_HELPERS = [
@@ -114,19 +113,28 @@ export function StudioClient({
   const [vibe, setVibe] = useState<FlipcastVibe>("serious");
   const [speed, setSpeed] = useState<number>(defaultSpeed);
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("auto");
+  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine>("elevenlabs");
   const [pickedVoices, setPickedVoices] = useState<string[]>([]);
   const [showSecondary, setShowSecondary] = useState(false);
 
   const lengthMinutes = lengthPreset("long").minutes;
   const cfg = formatConfig(format);
   const eligibleVoices = useMemo(
-    () => ELEVENLABS_VOICES.filter((v) => v.engines.includes(cfg.engine)),
-    [cfg.engine],
+    () =>
+      VOICES.filter(
+        (v) =>
+          !v.adOnly &&
+          v.provider === voiceEngine &&
+          v.engines.includes(voiceEngine),
+      ),
+    [voiceEngine],
   );
 
+  // Clear any voice picks when the user switches format or engine — the
+  // previous picks may no longer be valid for the new pool.
   useEffect(() => {
     setPickedVoices([]);
-  }, [format]);
+  }, [format, voiceEngine]);
 
   // Session / generation state
   const [submitting, setSubmitting] = useState(false);
@@ -145,10 +153,14 @@ export function StudioClient({
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
+  // Playback state — audio auto-plays; there's no play/pause button.
   const [playback, setPlayback] = useState<{
     stage: PlaybackStage;
     index: number;
   }>({ stage: "idle", index: 0 });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
@@ -229,7 +241,7 @@ export function StudioClient({
     return null;
   }
 
-  // Advance from waiting → playing when the next asset arrives.
+  // Advance from waiting → playing the moment the next asset becomes available.
   useEffect(() => {
     if (playback.stage !== "waiting" || !plan) return;
     const item = plan.items[playback.index];
@@ -237,7 +249,7 @@ export function StudioClient({
       setPlayback({ stage: "playing", index: playback.index });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [welcomeUrl, sceneUrls, playback, plan]);
+  }, [welcomeUrl, sceneUrls, adRotation, playback, plan]);
 
   async function submit() {
     if (!topic || topic.trim().length < 3) {
@@ -259,11 +271,13 @@ export function StudioClient({
     setWelcomeUrl(null);
     setSceneUrls({});
     setSceneTurns({});
-    setPlan(null);
     setAdRotation(null);
+    setPlan(null);
     setPlayback({ stage: "idle", index: 0 });
-    // Fire ad rotation in parallel with the cast submission so it's ready
-    // by the time the player needs ad URLs.
+    setCurrentTime(0);
+    setDuration(0);
+    // Fire ad rotation fetch in parallel so the URLs are ready by the time
+    // the player hits its first ad slot.
     void fetch("/api/ads/rotation?count=5", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -282,6 +296,7 @@ export function StudioClient({
           lengthMinutes,
           speed,
           voiceIds: voiceMode === "pick" ? pickedVoices : undefined,
+          engine: voiceEngine,
         }),
       });
       const data = await res.json();
@@ -305,12 +320,11 @@ export function StudioClient({
       setPlayback({ stage: "finished", index: nextIndex });
       return;
     }
-    const item = plan.items[nextIndex]!;
-    if (srcForItem(item)) {
-      setPlayback({ stage: "playing", index: nextIndex });
-    } else {
-      setPlayback({ stage: "waiting", index: nextIndex });
-    }
+    const next = plan.items[nextIndex]!;
+    setPlayback({
+      stage: srcForItem(next) ? "playing" : "waiting",
+      index: nextIndex,
+    });
   }
 
   function resetSession() {
@@ -323,24 +337,64 @@ export function StudioClient({
     setTopicContext(null);
     setWelcomeUrl(null);
     setSceneUrls({});
+    setAdRotation(null);
     setSceneTurns({});
     setError(null);
     setPlayback({ stage: "idle", index: 0 });
   }
 
+  const hasStarted = Boolean(plan && requestId);
+
   const currentItem =
     plan && (playback.stage === "playing" || playback.stage === "waiting")
-      ? plan.items[playback.index]
+      ? plan.items[playback.index] ?? null
       : null;
   const currentSrc = currentItem ? srcForItem(currentItem) : null;
-  const hasStarted = Boolean(plan && requestId);
   const isFinished = playback.stage === "finished";
-  const isWaiting = playback.stage === "waiting" || (!!currentItem && !currentSrc);
+  const isWaiting =
+    playback.stage === "waiting" || (!!currentItem && !currentSrc);
 
-  const formatLabel =
-    AVAILABLE_FORMATS.find((f) => f.id === format)?.label ?? format;
-  const vibeLabel =
-    AVAILABLE_VIBES.find((v) => v.id === vibe)?.label ?? vibe;
+  // Progress = playback position across the sequence. During each item the
+  // bar fills by that item's share as currentTime advances.
+  const progressPercent = useMemo(() => {
+    if (!plan || !hasStarted) return submitting ? 4 : 0;
+    if (isFinished) return 100;
+    const total = plan.items.length;
+    const within = duration > 0 ? currentTime / duration : 0;
+    const pct = ((playback.index + within) / total) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }, [
+    plan,
+    hasStarted,
+    submitting,
+    isFinished,
+    duration,
+    currentTime,
+    playback.index,
+  ]);
+
+  const currentStageLabel = useMemo(() => {
+    if (isFinished) return "Finished.";
+    if (!hasStarted && submitting) return "Starting up…";
+    if (!hasStarted) return null;
+    if (isWaiting) {
+      const last = [...events].reverse().find((e) => !!e.message);
+      return last?.message ? `${last.message} Waiting on audio…` : "Waiting on audio…";
+    }
+    if (currentItem) {
+      if (currentItem.kind === "station_intro") return "Station intro";
+      if (currentItem.kind === "ad")
+        return `Ad break ${currentItem.adIndex + 1}`;
+      if (currentItem.kind === "welcome") return "Welcome";
+      if (currentItem.kind === "scene")
+        return currentItem.isFinal
+          ? `Scene ${currentItem.sceneIndex} — closing`
+          : `Scene ${currentItem.sceneIndex}`;
+    }
+    return "Working…";
+  }, [currentItem, isFinished, isWaiting, events, submitting, hasStarted]);
+
+  const isComplete = isFinished;
 
   const characterByRole = new Map(characters?.map((c) => [c.role, c]) ?? []);
 
@@ -355,7 +409,7 @@ export function StudioClient({
 
   function handleSaveDraft() {
     if (typeof window === "undefined") return;
-    const draft = { topic, format, vibe, speed, voiceMode, pickedVoices };
+    const draft = { topic, format, vibe, speed, voiceMode, voiceEngine, pickedVoices };
     try {
       window.localStorage.setItem("flipcast:draft", JSON.stringify(draft));
       setToast("Draft saved");
@@ -601,6 +655,39 @@ export function StudioClient({
             {showSecondary && (
               <div className="mt-5 flex flex-col gap-5">
                 <div>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium text-ink-700">Voice engine</span>
+                    <span className="text-xs text-ink-400">
+                      Swaps the provider for every scene voice
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setVoiceEngine("elevenlabs")}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        voiceEngine === "elevenlabs"
+                          ? "bg-brand-gradient text-white shadow-card"
+                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
+                      }`}
+                    >
+                      ElevenLabs
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVoiceEngine("fish")}
+                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                        voiceEngine === "fish"
+                          ? "bg-brand-gradient text-white shadow-card"
+                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
+                      }`}
+                    >
+                      Fish Audio
+                    </button>
+                  </div>
+                </div>
+
+                <div>
                   <div className="mb-2 flex justify-between text-sm">
                     <span className="font-medium text-ink-700">
                       Speaker speed
@@ -682,6 +769,22 @@ export function StudioClient({
             )}
           </section>
 
+          {/* Generate CTA — lives directly under Fine-tune */}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={
+              submitting || !topic || topic.trim().length < 3 || hasStarted
+            }
+            className="w-full rounded-full bg-brand-gradient px-6 py-4 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting
+              ? "Starting up…"
+              : hasStarted
+                ? "Generating…"
+                : "Generate Flipcast"}
+          </button>
+
           {/* Error */}
           {error && (
             <div className="rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-200">
@@ -689,26 +792,61 @@ export function StudioClient({
             </div>
           )}
 
-          {/* Preview + player */}
-          <PreviewPlayer
-            plan={plan}
-            currentItem={currentItem ?? null}
-            currentSrc={currentSrc}
-            currentIndex={playback.index}
-            isWaiting={isWaiting}
-            isFinished={isFinished}
-            hasStarted={hasStarted}
-            onEnded={handleTrackEnded}
-            submitting={submitting}
-            onGenerate={submit}
-            canGenerate={!!topic && topic.trim().length >= 3 && !submitting}
-            formatLabel={formatLabel}
-            vibeLabel={vibeLabel}
-            castSize={cfg.castSize}
-            outline={outline}
-            topicContext={topicContext}
-            requestId={requestId}
-          />
+          {/* Progress + hidden audio (no play button, auto-plays) */}
+          {(submitting || hasStarted) && (
+            <section className="glass rounded-3xl p-6 shadow-card">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+                    {isFinished ? "Done" : isWaiting ? "Generating" : "Playing"}
+                  </div>
+                  <div className="mt-1 text-sm text-ink-600">
+                    {currentStageLabel}
+                  </div>
+                </div>
+                <div className="text-sm font-mono text-ink-500">
+                  {plan
+                    ? `${Math.min(playback.index + 1, plan.items.length)} / ${plan.items.length}`
+                    : ""}
+                </div>
+              </div>
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-200/70">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full bg-brand-gradient transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+                {isWaiting && (
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="h-full w-1/3 -translate-x-full animate-shimmer-bar bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                  </div>
+                )}
+              </div>
+              {requestId && isComplete && (
+                <div className="mt-4 flex justify-end">
+                  <Link
+                    href={`/player/${requestId}`}
+                    className="inline-flex h-10 items-center rounded-full bg-brand-gradient px-5 text-sm font-semibold text-white shadow-glow transition hover:scale-[1.02]"
+                  >
+                    Open player →
+                  </Link>
+                </div>
+              )}
+              {/* key={currentSrc} forces autoplay on each new item */}
+              <audio
+                key={currentSrc ?? "idle"}
+                ref={audioRef}
+                src={currentSrc ?? undefined}
+                autoPlay
+                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onEnded={() => {
+                  setCurrentTime(0);
+                  setDuration(0);
+                  handleTrackEnded();
+                }}
+              />
+            </section>
+          )}
 
           {/* Remix actions */}
           {hasStarted && (

@@ -7,6 +7,7 @@ import {
   planSequence,
   VOICE_BY_ID,
   type FlipcastFormat,
+  type TtsEngine,
 } from "@flipcast/types";
 import {
   flipcastRequests,
@@ -33,7 +34,9 @@ export async function POST(req: Request) {
   const input = parsed.data;
   const format = input.format as FlipcastFormat;
   const cfg = formatConfig(format);
-  const engine = cfg.engine;
+  // Per-request engine override (e.g. user picked Fish in Studio); fall back
+  // to the format's default engine.
+  const engine: TtsEngine = input.engine ?? cfg.engine;
 
   // Validate any user-supplied voice picks.
   if (input.voiceIds && input.voiceIds.length > 0) {

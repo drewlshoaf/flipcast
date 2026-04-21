@@ -5,12 +5,13 @@ export type TtsEngine =
   | "standard"
   | "elevenlabs"
   | "elevenlabs-flash"
-  | "elevenlabs-narration";
+  | "elevenlabs-narration"
+  | "fish";
 
 /** @deprecated use TtsEngine */
 export type PollyEngine = TtsEngine;
 
-export type TtsProvider = "polly" | "elevenlabs";
+export type TtsProvider = "polly" | "elevenlabs" | "fish";
 
 export type VoiceOrigin =
   | "american"
@@ -66,6 +67,14 @@ export const VOICES: VoiceOption[] = [
   { id: "el-marcus", label: "Marcus", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "6lbtrJXRylVZ6EqIQQPT", adOnly: true },
   { id: "el-jerry", label: "Jerry", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "1t1EeRixsJrKbiF1zwM6", adOnly: true },
   { id: "el-samantha", label: "Samantha", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "c2O7ZagKqb05VCpb66Qc", adOnly: true },
+
+  // --- Fish Audio scene voices (s2-pro model). reference_id is the Fish voice id. ---
+  { id: "fa-paula", label: "Paula", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c2623f0c075b4492ac367989aee1576f" },
+  { id: "fa-sarah", label: "Sarah", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "933563129e564b19a115bedd57b7406a" },
+  { id: "fa-allie", label: "Allie", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "59e9dc1cb20c452584788a2690c80970" },
+  { id: "fa-jim", label: "Jim", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "d8a1340984ee4b63ad1ffae27a6a4339" },
+  { id: "fa-charlie", label: "Charlie", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "fb7ec16ca51a45a5a4db881244d7990a" },
+  { id: "fa-alex", label: "Alex", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c85fb11f91f84312a4bd16756f298ae2" },
 ];
 
 export const ELEVENLABS_VOICES: VoiceOption[] = VOICES.filter(
