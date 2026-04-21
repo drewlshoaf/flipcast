@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
-import { emailVerificationCodes } from "@flipcast/server-db";
+import { emailVerificationCodes } from "@flipaudio/server-db";
 import { db } from "./db";
 
 export const CODE_TTL_MINUTES = 15;

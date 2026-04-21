@@ -1,5 +1,5 @@
 {
-  "name": "flipcast",
+  "name": "flipaudio",
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "scripts": {
@@ -7,9 +7,9 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:generate": "pnpm --filter @flipcast/server-db db:generate",
-    "db:migrate": "pnpm --filter @flipcast/server-db db:migrate",
-    "db:push": "pnpm --filter @flipcast/server-db db:push"
+    "db:generate": "pnpm --filter @flipaudio/server-db db:generate",
+    "db:migrate": "pnpm --filter @flipaudio/server-db db:migrate",
+    "db:push": "pnpm --filter @flipaudio/server-db db:push"
   },
   "devDependencies": {
     "turbo": "^2.1.0",

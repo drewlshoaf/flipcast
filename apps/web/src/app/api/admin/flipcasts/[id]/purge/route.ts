@@ -4,7 +4,7 @@ import {
   DeleteObjectsCommand,
   ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
-import { flipcastRequests } from "@flipcast/server-db";
+import { flipcastRequests } from "@flipaudio/server-db";
 import { db } from "@/lib/db";
 import { s3 } from "@/lib/s3";
 import { env } from "@/lib/env";

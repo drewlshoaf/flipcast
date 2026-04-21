@@ -16,8 +16,13 @@ export const env = {
   s3AccessKey: process.env.S3_ACCESS_KEY ?? "minioadmin",
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  defaultSpeed: clampSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
-  defaultEngine: resolveEngine(process.env.FLIPCAST_DEFAULT_ENGINE),
+  defaultSpeed: clampSpeed(
+    process.env.FLIPAUDIO_DEFAULT_SPEED ?? process.env.FLIPCAST_DEFAULT_SPEED,
+    1.0,
+  ),
+  defaultEngine: resolveEngine(
+    process.env.FLIPAUDIO_DEFAULT_ENGINE ?? process.env.FLIPCAST_DEFAULT_ENGINE,
+  ),
   authSecret: process.env.AUTH_SECRET ?? "",
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
@@ -30,9 +35,8 @@ function clampSpeed(raw: string | undefined, fallback: number): number {
   return Math.min(1.2, Math.max(0.7, n));
 }
 
-function resolveEngine(raw: string | undefined): "elevenlabs" | "fish" {
-  const v = raw?.trim().toLowerCase();
-  if (v === "elevenlabs" || v === "fish") return v;
+function resolveEngine(_raw: string | undefined): "fish" {
+  // Only one provider is supported right now.
   return "fish";
 }
 

@@ -3,15 +3,12 @@ export type TtsEngine =
   | "long-form"
   | "generative"
   | "standard"
-  | "elevenlabs"
-  | "elevenlabs-flash"
-  | "elevenlabs-narration"
   | "fish";
 
 /** @deprecated use TtsEngine */
 export type PollyEngine = TtsEngine;
 
-export type TtsProvider = "polly" | "elevenlabs" | "fish";
+export type TtsProvider = "polly" | "fish";
 
 export type VoiceOrigin =
   | "american"
@@ -32,14 +29,8 @@ export interface VoiceOption {
   adOnly?: boolean;
 }
 
-const ELEVEN_ENGINES: TtsEngine[] = [
-  "elevenlabs",
-  "elevenlabs-flash",
-  "elevenlabs-narration",
-];
-
 export const VOICES: VoiceOption[] = [
-  // --- AWS Polly (kept so ads generator still works, not user-exposed) ---
+  // --- AWS Polly (kept for legacy Polly ad scripts, not user-exposed) ---
   { id: "Joanna", label: "Joanna", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
   { id: "Matthew", label: "Matthew", gender: "male", engines: ["neural", "generative"], provider: "polly", origin: "american" },
   { id: "Ruth", label: "Ruth", gender: "female", engines: ["neural", "long-form", "generative"], provider: "polly", origin: "american" },
@@ -53,21 +44,6 @@ export const VOICES: VoiceOption[] = [
   { id: "Danielle", label: "Danielle", gender: "female", engines: ["long-form", "generative"], provider: "polly", origin: "american" },
   { id: "Gregory", label: "Gregory", gender: "male", engines: ["long-form", "generative"], provider: "polly", origin: "american" },
 
-  // --- ElevenLabs scene voices (user-facing voice pool) ---
-  { id: "el-jon", label: "Jon", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "sB7vwSCyX0tQmU24cW2C" },
-  { id: "el-lauren", label: "Lauren", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "DODLEQrClDo8wCz460ld" },
-  { id: "el-michael", label: "Michael", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "ljX1ZrXuDIIRVcmiVSyR" },
-  { id: "el-maya", label: "Maya", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "4O1sYUnmtThcBoSBrri7" },
-  { id: "el-luna", label: "Luna", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "6rOxfAnZpbM3VIEhFaeV" },
-  { id: "el-aiden", label: "Aiden", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "EOVAuWqgSZN2Oel78Psj" },
-  { id: "el-princess", label: "Princess", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "EYQ7WzWOUhRLHwL7i08O" },
-  { id: "el-wright", label: "Wright", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "p9aPdOJyVPGIIIcYcvKh" },
-
-  // --- ElevenLabs ad voices (not shown in scene voice picker) ---
-  { id: "el-marcus", label: "Marcus", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "6lbtrJXRylVZ6EqIQQPT", adOnly: true },
-  { id: "el-jerry", label: "Jerry", gender: "male", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "1t1EeRixsJrKbiF1zwM6", adOnly: true },
-  { id: "el-samantha", label: "Samantha", gender: "female", engines: ELEVEN_ENGINES, provider: "elevenlabs", origin: "american", providerVoiceId: "c2O7ZagKqb05VCpb66Qc", adOnly: true },
-
   // --- Fish Audio scene voices (s2-pro model). reference_id is the Fish voice id. ---
   { id: "fa-paula", label: "Paula", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c2623f0c075b4492ac367989aee1576f" },
   { id: "fa-sarah", label: "Sarah", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "933563129e564b19a115bedd57b7406a" },
@@ -77,8 +53,8 @@ export const VOICES: VoiceOption[] = [
   { id: "fa-alex", label: "Alex", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c85fb11f91f84312a4bd16756f298ae2" },
 ];
 
-export const ELEVENLABS_VOICES: VoiceOption[] = VOICES.filter(
-  (v) => v.provider === "elevenlabs" && !v.adOnly,
+export const FISH_VOICES: VoiceOption[] = VOICES.filter(
+  (v) => v.provider === "fish" && !v.adOnly,
 );
 
 export const VOICE_IDS = new Set(VOICES.map((v) => v.id));
@@ -100,14 +76,14 @@ export const AVAILABLE_FORMATS = [
     label: "Panel",
     description: "Three distinct voices debating the topic.",
     castSize: 3,
-    engine: "elevenlabs" as const,
+    engine: "fish" as const,
   },
   {
     id: "newscast",
     label: "Anchor",
     description: "A single host delivering a clean, authoritative report.",
     castSize: 1,
-    engine: "elevenlabs" as const,
+    engine: "fish" as const,
   },
 ] as const;
 
@@ -192,7 +168,7 @@ export function lengthPreset(id: FlipcastLength) {
   return preset;
 }
 
-// ElevenLabs accepts voice_settings.speed between 0.7 and 1.2 (1.0 = normal).
+// Speed is scoped to 0.7–1.2 (1.0 = normal).
 export const MIN_SPEED = 0.7;
 export const MAX_SPEED = 1.2;
 export const SPEED_STEP = 0.05;
@@ -216,7 +192,7 @@ export interface SequencePlan {
   estimatedSeconds: number;
 }
 
-/** Fixed Flipcast playback sequence — never plays 3 ads in a row:
+/** Fixed Flip.audio playback sequence — never plays 3 ads in a row:
  *   station_intro (~10s) → ad (25s) → ad (25s) → welcome (~30s)
  *   → ad (25s) → scene 1 (120s) → ad (25s) → scene 2 (120s)
  *   → ad (25s) → scene 3 (60s, final)

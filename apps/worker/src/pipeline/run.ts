@@ -4,7 +4,7 @@ import {
   transcripts,
   transcriptSegments,
   audioAssets,
-} from "@flipcast/server-db";
+} from "@flipaudio/server-db";
 import {
   VOICE_BY_ID,
   planSequence,
@@ -22,7 +22,7 @@ import {
   type FlipcastFormat,
   type FlipcastVibe,
   type SceneOutline,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import { db } from "../db";
 import { env } from "../env";
 import { emit } from "../emit";
@@ -36,7 +36,6 @@ import { uploadObject } from "../clients/s3";
 import { stitchSegments } from "./stitch";
 
 const CONCURRENCY_LIMIT: Record<TtsProvider, number> = {
-  elevenlabs: 3,
   polly: 10,
   fish: 5,
 };
@@ -48,7 +47,7 @@ export async function runPipeline(requestId: string): Promise<void> {
   if (!request) throw new Error(`Request ${requestId} not found`);
 
   try {
-    const engineChoice = (request.engine ?? "elevenlabs") as TtsEngine;
+    const engineChoice = (request.engine ?? "fish") as TtsEngine;
     const format = (request.format ?? "panel") as FlipcastFormat;
     const vibe = (request.vibe ?? "serious") as FlipcastVibe;
     const cfg = formatConfig(format);
@@ -454,7 +453,7 @@ export async function runPipeline(requestId: string): Promise<void> {
       })
       .where(eq(flipcastRequests.id, requestId));
 
-    await emit("complete", requestId, { message: "Flipcast ready." });
+    await emit("complete", requestId, { message: "Flip.audio ready." });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     await db

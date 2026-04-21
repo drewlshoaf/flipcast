@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { emailVerificationCodes, users } from "@flipcast/server-db";
+import { emailVerificationCodes, users } from "@flipaudio/server-db";
 import { db } from "@/lib/db";
 import { MAX_ATTEMPTS } from "@/lib/verification";
 

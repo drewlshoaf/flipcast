@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { users } from "@flipcast/server-db";
+import { users } from "@flipaudio/server-db";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ProfileForm } from "@/components/profile/profile-form";
@@ -37,7 +37,7 @@ export default async function ProfilePage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flipcast
+            Flip.audio
           </span>
         </Link>
         <UserChip user={sessionUser} />
@@ -47,7 +47,7 @@ export default async function ProfilePage() {
         Profile
       </h1>
       <p className="mt-1 text-base text-ink-500">
-        How you show up across Flipcast.
+        How you show up across Flip.audio.
       </p>
 
       <div className="mt-8 flex flex-col gap-6">

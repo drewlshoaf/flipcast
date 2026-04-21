@@ -2,7 +2,7 @@ import {
   resolveProviderVoiceId,
   type TtsEngine,
   type VoiceOption,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import { env } from "../env";
 
 const FISH_ENDPOINT = "https://api.fish.audio/v1/tts";

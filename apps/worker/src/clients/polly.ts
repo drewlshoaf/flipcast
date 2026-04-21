@@ -4,7 +4,7 @@ import {
   type Engine,
   type VoiceId,
 } from "@aws-sdk/client-polly";
-import { resolveProviderVoiceId, type VoiceOption, type TtsEngine } from "@flipcast/types";
+import { resolveProviderVoiceId, type VoiceOption, type TtsEngine } from "@flipaudio/types";
 import { env } from "../env";
 
 const polly = new PollyClient({

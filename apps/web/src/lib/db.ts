@@ -1,4 +1,4 @@
-import { createDb, type Database } from "@flipcast/server-db";
+import { createDb, type Database } from "@flipaudio/server-db";
 import { env } from "./env";
 
 declare global {

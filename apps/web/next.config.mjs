@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@flipcast/types", "@flipcast/server-db", "@flipcast/queue"],
+  transpilePackages: ["@flipaudio/types", "@flipaudio/server-db", "@flipaudio/queue"],
   experimental: {
     serverComponentsExternalPackages: ["pg", "bullmq", "ioredis"],
   },

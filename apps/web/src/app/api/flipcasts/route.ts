@@ -8,12 +8,12 @@ import {
   VOICE_BY_ID,
   type FlipcastFormat,
   type TtsEngine,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import {
   flipcastRequests,
   moderationDecisions,
-} from "@flipcast/server-db";
-import { publishSseEvent, createRedisPublisher } from "@flipcast/queue";
+} from "@flipaudio/server-db";
+import { publishSseEvent, createRedisPublisher } from "@flipaudio/queue";
 import { db } from "@/lib/db";
 import { flipcastQueue } from "@/lib/queue";
 import { env } from "@/lib/env";
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   const userId = session?.user?.id ?? null;
   if (!userId) {
     return NextResponse.json(
-      { error: "Sign in to create a Flipcast." },
+      { error: "Sign in to create a Flip.audio." },
       { status: 401 },
     );
   }

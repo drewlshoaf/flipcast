@@ -13,17 +13,15 @@ export const env = {
   s3AccessKey: process.env.S3_ACCESS_KEY ?? "minioadmin",
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  elevenlabsApiKey: process.env.ELEVENLABS_API_KEY ?? "",
-  elevenlabsMaxConcurrent: parsePositiveInt(
-    process.env.ELEVENLABS_MAX_CONCURRENT,
-    3,
-  ),
   fishAudioApiKey: process.env.FISH_AUDIO ?? "",
   fishAudioMaxConcurrent: parsePositiveInt(
     process.env.FISH_AUDIO_MAX_CONCURRENT,
     5,
   ),
-  defaultSpeed: parseSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
+  defaultSpeed: parseSpeed(
+    process.env.FLIPAUDIO_DEFAULT_SPEED ?? process.env.FLIPCAST_DEFAULT_SPEED,
+    1.0,
+  ),
 };
 
 function parsePositiveInt(raw: string | undefined, fallback: number): number {
@@ -37,6 +35,6 @@ function parseSpeed(raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;
   const n = Number(raw);
   if (!Number.isFinite(n)) return fallback;
-  // Clamp to ElevenLabs' supported range.
+  // Supported speed range.
   return Math.min(1.2, Math.max(0.7, n));
 }

@@ -14,7 +14,7 @@ import {
   type FlipcastFormat,
   type FlipcastVibe,
   type SceneOutline,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 
 const SETUP_MODEL = "claude-sonnet-4-6";
 const NEWSCAST_MODEL = "claude-sonnet-4-6";
@@ -179,7 +179,7 @@ const FULL_NEWSCAST_TOOL = {
       welcomeText: {
         type: "string",
         description:
-          "The host's opening words right after the station intro and first ads. ~75 words. Frame the topic with real context (3-4 sentences — what it is, why it matters right now, what the listener will get from this report). Do NOT re-greet with 'welcome to Flipcast'. End with the verbatim line: \"We'll be right with you after this ad.\"",
+          "The host's opening words right after the station intro and first ads. ~75 words. Frame the topic with real context (3-4 sentences — what it is, why it matters right now, what the listener will get from this report). Do NOT re-greet with 'welcome to Flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
       },
       scenes: {
         type: "array",
@@ -392,13 +392,13 @@ export async function generateSetup(args: {
       ].join("\n");
 
   const system = [
-    `You are casting ${formatBlurb(args.format)} for Flipcast.`,
+    `You are casting ${formatBlurb(args.format)} for Flip.audio.`,
     castInstructions,
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let this color the personas, welcome script, and voice-matching choices.`,
     "For each character, emit name, gender, a one- or two-word ethnic/accent descriptor, bio (~7-10 words, spoken out loud in the intro), and a 4-6 sentence theatrical persona.",
     useSolo
-      ? "The welcome is the host's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flipcast...\"). Do NOT re-greet with \"welcome to Flipcast.\" Jump straight in — e.g. \"Hi, I'm [name]\" or \"Alright —\" — then frame the topic with real context: 3-4 sentences covering what it is, why it matters right now, and what the listener will get from this report. End with this EXACT line as the final sentence: \"We'll be right with you after this ad.\" First-person host voice, ~75 words total."
-      : "The welcome is the moderator's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flipcast...\"). Do NOT re-greet with \"welcome to Flipcast.\" Jump straight in — e.g. \"Hi, I'm [name]\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease each panelist by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're gathering the panelists and we'll start shortly, right after this ad.\" First-person moderator voice, ~75 words total.",
+      ? "The welcome is the host's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flip.audio...\"). Do NOT re-greet with \"welcome to Flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" or \"Alright —\" — then frame the topic with real context: 3-4 sentences covering what it is, why it matters right now, and what the listener will get from this report. End with this EXACT line as the final sentence: \"We'll be right with you after this ad.\" First-person host voice, ~75 words total."
+      : "The welcome is the moderator's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing Flip.audio...\"). Do NOT re-greet with \"welcome to Flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease each panelist by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're gathering the panelists and we'll start shortly, right after this ad.\" First-person moderator voice, ~75 words total.",
     voiceInstructions,
     "",
     `Voice catalog (engine: ${args.engine}):`,
@@ -512,12 +512,12 @@ export async function generateFullNewscast(args: {
       ].join("\n");
 
   const system = [
-    "You are producing a complete newscast episode of Flipcast in a single response.",
+    "You are producing a complete newscast episode of Flip.audio in a single response.",
     "Invent ONE credible, authoritative anchor — plausible name, gender, ethnicity, short on-air bio, and a 4-6 sentence persona.",
     "Vary names widely across runs. Traditional American names (Michael Davidson, Sarah Carter, David Thompson, Jennifer Walsh, etc.) are great and often the best fit — avoid defaulting to the same distinctive non-American names. AVOID 'Dmitri Volkov', 'Amara Okafor', 'Priya Patel', 'Maya Desai'.",
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let it shape word choice and energy.`,
     "",
-    "Write the welcome message (host's opening after the station intro + first ads) — ~75 words, framing the topic with real context (3-4 sentences — what it is, why it matters now, what the listener will get). No re-greeting with 'welcome to Flipcast'. End with the verbatim line: \"We'll be right with you after this ad.\"",
+    "Write the welcome message (host's opening after the station intro + first ads) — ~75 words, framing the topic with real context (3-4 sentences — what it is, why it matters now, what the listener will get). No re-greeting with 'welcome to Flip.audio'. End with the verbatim line: \"We'll be right with you after this ad.\"",
     "",
     "Then write all scenes in order. Each scene is a monologue broken into a handful of `turns` (to allow natural pauses). Target durations:",
     scenesBrief,
@@ -667,7 +667,7 @@ export async function generateScene(args: {
   // within the same episode (5-min TTL on ephemeral cache). formatGuidance,
   // openingGuidance, vibe, and general rules don't change between scenes.
   const stableSystem = [
-    `You write one scene of a Flipcast episode using the provided cast and outline.`,
+    `You write one scene of a Flip.audio episode using the provided cast and outline.`,
     formatGuidance,
     openingGuidance,
     `Tone/vibe: ${vibeDescription(args.vibe)}. Let it shape word choice, pacing, and energy.`,
@@ -907,7 +907,7 @@ function stubSceneTurns(
     if (isFinal) {
       return [
         { sequence: 0, speaker: "moderator", text: `And we're back. Before we close out — here's what stuck with me about ${args.topic}.`, pauseMsAfter: 150, isAd: false },
-        { sequence: 1, speaker: "moderator", text: `Thanks for listening to Flipcast — we'll see you next time.`, pauseMsAfter: 250, isAd: false },
+        { sequence: 1, speaker: "moderator", text: `Thanks for listening to Flip.audio — we'll see you next time.`, pauseMsAfter: 250, isAd: false },
       ];
     }
     return [
@@ -925,7 +925,7 @@ function stubSceneTurns(
       { sequence: 0, speaker: "moderator", text: `Welcome back. ${leadWith?.name}, give me the one line you want listeners to walk away with on ${args.topic}.`, pauseMsAfter: 150, isAd: false },
       { sequence: 1, speaker: leadWith === p1 ? "panelist_1" : "panelist_2", text: `Stay curious about ${args.topic}. That's the whole game.`, pauseMsAfter: 150, isAd: false },
       { sequence: 2, speaker: followWith === p1 ? "panelist_1" : "panelist_2", text: `And read something tomorrow you wouldn't normally read.`, pauseMsAfter: 150, isAd: false },
-      { sequence: 3, speaker: "moderator", text: `Beautiful. Thanks ${p1?.name}, ${p2?.name}. Thanks for listening to Flipcast.`, pauseMsAfter: 200, isAd: false },
+      { sequence: 3, speaker: "moderator", text: `Beautiful. Thanks ${p1?.name}, ${p2?.name}. Thanks for listening to Flip.audio.`, pauseMsAfter: 200, isAd: false },
     ];
   }
   return [

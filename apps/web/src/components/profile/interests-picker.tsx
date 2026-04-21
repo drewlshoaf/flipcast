@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { INTEREST_CATALOG } from "@flipcast/types";
+import { INTEREST_CATALOG } from "@flipaudio/types";
 
 interface Props {
   initialSelected: string[];

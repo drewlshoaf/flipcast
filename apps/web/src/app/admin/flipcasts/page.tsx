@@ -7,7 +7,7 @@ import {
   transcripts,
   transcriptSegments,
   audioAssets,
-} from "@flipcast/server-db";
+} from "@flipaudio/server-db";
 import {
   AD_SECONDS,
   STATION_INTRO_SECONDS,
@@ -17,7 +17,7 @@ import {
   elevenLabsCostUsd,
   planSequence,
   type ClaudeUsageAggregate,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
@@ -28,7 +28,7 @@ import {
 } from "@/components/admin/flipcasts-table";
 
 const STATION_INTRO_TEXT =
-  "Thanks for choosing Flipcast. We're assembling your Flipcast and will be with you shortly — right after these short ads.";
+  "Thanks for choosing Flip.audio. We're assembling your Flip.audio and will be with you shortly — right after these short ads.";
 
 export default async function AdminFlipcastsPage() {
   const session = await requireAdmin();
@@ -210,7 +210,7 @@ export default async function AdminFlipcastsPage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flipcast · Admin
+            Flip.audio · Admin
           </span>
         </Link>
         <UserChip user={sessionUser} />

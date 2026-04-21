@@ -1,6 +1,6 @@
 import { Queue, type ConnectionOptions } from "bullmq";
 import Redis from "ioredis";
-import { sseChannel, type SseEvent } from "@flipcast/types";
+import { sseChannel, type SseEvent } from "@flipaudio/types";
 
 export const FLIPCAST_QUEUE = "flipcast";
 

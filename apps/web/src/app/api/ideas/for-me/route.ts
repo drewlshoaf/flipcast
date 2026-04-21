@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { eq } from "drizzle-orm";
-import { INTEREST_BY_ID } from "@flipcast/types";
-import { users } from "@flipcast/server-db";
+import { INTEREST_BY_ID } from "@flipaudio/types";
+import { users } from "@flipaudio/server-db";
 import { env } from "@/lib/env";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -19,7 +19,7 @@ interface ForMePayload {
 const FOR_ME_TOOL = {
   name: "emit_for_me",
   description:
-    "Emit Flipcast topic ideas tuned to a user's selected interests.",
+    "Emit Flip.audio topic ideas tuned to a user's selected interests.",
   input_schema: {
     type: "object",
     properties: {
@@ -83,7 +83,7 @@ export async function GET() {
     model: "claude-haiku-4-5-20251001",
     max_tokens: 1024,
     system: [
-      "You generate Flipcast topic ideas tailored to a specific user's interests.",
+      "You generate Flip.audio topic ideas tailored to a specific user's interests.",
       "Each idea must be 8-14 words and read as a concrete, opinionated podcast prompt the user could submit directly.",
       "Vary the topics across the user's interests (don't pile them all into one). Be specific and slightly provocative; avoid generic 'how X is changing the world' phrasing.",
       "Emit strictly via the `emit_for_me` tool.",

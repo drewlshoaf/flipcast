@@ -3,7 +3,7 @@ import {
   FLIPCAST_QUEUE,
   redisConnectionFromUrl,
   type FlipcastJobData,
-} from "@flipcast/queue";
+} from "@flipaudio/queue";
 import { env } from "./env";
 import { runPipeline } from "./pipeline/run";
 

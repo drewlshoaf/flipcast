@@ -29,8 +29,12 @@ export const CLAUDE_PRICING_PER_MTOK: Record<
   },
 };
 
-// Flat pay-as-you-go rate: $0.10 per 1000 characters synthesized.
-export const ELEVENLABS_USD_PER_1K_CHARS = 0.1;
+/// Flat pay-as-you-go rate for TTS, per 1000 characters synthesized. Fish
+// Audio s2-pro pricing; update when the rate card changes.
+export const TTS_USD_PER_1K_CHARS = 0.1;
+
+/** @deprecated use TTS_USD_PER_1K_CHARS */
+export const ELEVENLABS_USD_PER_1K_CHARS = TTS_USD_PER_1K_CHARS;
 
 export interface ClaudeCallUsage {
   inputTokens: number;
@@ -105,6 +109,9 @@ export function claudeCostUsd(agg: ClaudeUsageAggregate | null | undefined): num
   return total;
 }
 
-export function elevenLabsCostUsd(chars: number): number {
-  return (chars * ELEVENLABS_USD_PER_1K_CHARS) / 1000;
+export function ttsCostUsd(chars: number): number {
+  return (chars * TTS_USD_PER_1K_CHARS) / 1000;
 }
+
+/** @deprecated use ttsCostUsd */
+export const elevenLabsCostUsd = ttsCostUsd;

@@ -1,23 +1,23 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ELEVENLABS_VOICES } from "@flipcast/types";
+import { FISH_VOICES } from "@flipaudio/types";
 import { synthesizeSegment } from "../src/clients/tts";
 
 const OUT_DIR = "/app/apps/web/public/voice-samples";
 
 const SAMPLE_SCRIPT = (name: string) =>
-  `Hi, I'm ${name}. This is what I sound like when I'm hosting a Flipcast.`;
+  `Hi, I'm ${name}. This is what I sound like when I'm hosting a Flip.audio.`;
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   const manifest: { id: string; label: string; url: string }[] = [];
 
-  for (const voice of ELEVENLABS_VOICES) {
+  for (const voice of FISH_VOICES) {
     console.log(`[samples] ${voice.label} (${voice.id})`);
     const mp3 = await synthesizeSegment(
       SAMPLE_SCRIPT(voice.label),
       voice.id,
-      "elevenlabs",
+      "fish",
     );
     const outPath = join(OUT_DIR, `${voice.id}.mp3`);
     await writeFile(outPath, mp3);

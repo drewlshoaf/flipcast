@@ -1,4 +1,4 @@
-import { ads, createDb } from "@flipcast/server-db";
+import { ads, createDb } from "@flipaudio/server-db";
 import { eq } from "drizzle-orm";
 
 const databaseUrl =

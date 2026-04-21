@@ -1,4 +1,4 @@
-import { VIBE_IDS, type FlipcastFormat, type FlipcastVibe } from "@flipcast/types";
+import { VIBE_IDS, type FlipcastFormat, type FlipcastVibe } from "@flipaudio/types";
 import { StudioClient } from "@/components/studio/studio-client";
 import { getSession } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -15,7 +15,7 @@ interface StudioPageProps {
 }
 
 const VALID_FORMATS: FlipcastFormat[] = ["panel", "newscast"];
-const VALID_ENGINES = ["elevenlabs", "fish"] as const;
+const VALID_ENGINES = ["fish"] as const;
 
 export default async function StudioPage({ searchParams }: StudioPageProps) {
   const initialTopic =

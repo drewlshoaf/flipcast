@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
-import { flipcastRequests } from "@flipcast/server-db";
+import { flipcastRequests } from "@flipaudio/server-db";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
@@ -71,7 +71,7 @@ export default async function LibraryPage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flipcast
+            Flip.audio
           </span>
         </Link>
         <UserChip user={sessionUser} />
@@ -83,7 +83,7 @@ export default async function LibraryPage() {
             Your library
           </h1>
           <p className="mt-1 text-base text-ink-500">
-            Every Flipcast you've made.
+            Every Flip.audio you've made.
           </p>
         </div>
         <Link

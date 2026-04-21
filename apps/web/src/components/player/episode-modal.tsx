@@ -9,7 +9,7 @@ import {
   type SequencePlan,
   type SpeakerRole,
   type TranscriptTurn,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 
 type Stage = "idle" | "playing" | "waiting" | "finished";

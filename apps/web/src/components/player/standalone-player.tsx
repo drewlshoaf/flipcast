@@ -7,7 +7,7 @@ import {
   type SequenceItem,
   type SequencePlan,
   type SseEvent,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 
 interface FlipcastRow {
   id: string;
@@ -290,7 +290,7 @@ export function StandalonePlayer({ requestId }: Props) {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            Flipcast
+            Flip.audio
           </span>
         </Link>
         <Link
@@ -493,7 +493,7 @@ export function StandalonePlayer({ requestId }: Props) {
           </section>
 
           <footer className="mt-auto pt-10 text-center text-xs text-ink-400">
-            Flipcast — on-demand podcasts. Keep this tab open to keep listening.
+            Flip.audio — on-demand podcasts. Keep this tab open to keep listening.
           </footer>
         </main>
       )}

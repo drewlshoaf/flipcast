@@ -1,3 +1,5 @@
+name: flipaudio
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -56,12 +58,12 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      FLIPCAST_BUCKET: ${FLIPCAST_BUCKET:-flipcast-audio}
+      FLIPAUDIO_BUCKET: ${FLIPAUDIO_BUCKET:-flipcast-audio}
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
-      mc mb --ignore-existing local/$$FLIPCAST_BUCKET &&
-      mc anonymous set download local/$$FLIPCAST_BUCKET
+      mc mb --ignore-existing local/$$FLIPAUDIO_BUCKET &&
+      mc anonymous set download local/$$FLIPAUDIO_BUCKET
       "
 
   migrate:
@@ -99,12 +101,12 @@ services:
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      S3_BUCKET: ${FLIPCAST_BUCKET:-flipcast-audio}
+      S3_BUCKET: ${FLIPAUDIO_BUCKET:-flipcast-audio}
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      FLIPCAST_DEFAULT_SPEED: ${FLIPCAST_DEFAULT_SPEED:-1.0}
-      FLIPCAST_DEFAULT_ENGINE: ${FLIPCAST_DEFAULT_ENGINE:-fish}
+      FLIPAUDIO_DEFAULT_SPEED: ${FLIPAUDIO_DEFAULT_SPEED:-1.0}
+      FLIPAUDIO_DEFAULT_ENGINE: ${FLIPAUDIO_DEFAULT_ENGINE:-fish}
       AUTH_SECRET: ${AUTH_SECRET:-}
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
       AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
@@ -141,14 +143,13 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      S3_BUCKET: ${FLIPCAST_BUCKET:-flipcast-audio}
+      S3_BUCKET: ${FLIPAUDIO_BUCKET:-flipcast-audio}
       S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
       S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
       FISH_AUDIO: ${FISH_AUDIO:-}
       FISH_AUDIO_MAX_CONCURRENT: ${FISH_AUDIO_MAX_CONCURRENT:-5}
-      FLIPCAST_DEFAULT_SPEED: ${FLIPCAST_DEFAULT_SPEED:-1.0}
+      FLIPAUDIO_DEFAULT_SPEED: ${FLIPAUDIO_DEFAULT_SPEED:-1.0}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
     command: ["pnpm", "dev"]
     volumes:

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { flipcastRequests } from "@flipcast/server-db";
+import { flipcastRequests } from "@flipaudio/server-db";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";

@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { ClaudeUsageAggregate } from "@flipcast/types";
+import type { ClaudeUsageAggregate } from "@flipaudio/types";
 
 export interface AdminItem {
   kind: "station_intro" | "ad" | "welcome" | "scene";

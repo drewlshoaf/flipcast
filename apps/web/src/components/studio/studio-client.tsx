@@ -11,13 +11,13 @@ import {
   type FlipcastVibe,
   type SequenceItem,
   type SequencePlan,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import type {
   Character,
   SceneOutline,
   SseEvent,
   TranscriptTurn,
-} from "@flipcast/types";
+} from "@flipaudio/types";
 import { IdeaRail } from "./idea-rail";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { EpisodeModal } from "@/components/player/episode-modal";
@@ -28,7 +28,7 @@ const ROLE_LABEL: Record<Character["role"], string> = {
   panelist_2: "Panelist",
 };
 
-type VoiceEngine = "elevenlabs" | "fish";
+type VoiceEngine = "fish";
 type PlaybackStage = "idle" | "playing" | "waiting" | "finished";
 
 // Clickable topic helpers. Each category has a pool; clicking a chip picks a
@@ -182,7 +182,7 @@ export function StudioClient({
   const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "serious");
   const autoStartFiredRef = useRef(false);
 
-  // Engine is admin-controlled via FLIPCAST_DEFAULT_ENGINE; only override if
+  // Engine is admin-controlled via FLIPAUDIO_DEFAULT_ENGINE; only override if
   // the URL explicitly carried an engine (e.g. persisted across a signup
   // redirect). No user-facing toggle.
   const voiceEngine: VoiceEngine = initialEngine ?? defaultEngine;
@@ -523,7 +523,7 @@ export function StudioClient({
           </Link>
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-ink-900">
-              Flipcast Studio
+              Flip.audio Studio
             </h1>
             <p className="text-xs text-ink-400">
               Topic → format → vibe → listen.
@@ -737,7 +737,7 @@ export function StudioClient({
               ? "Starting up…"
               : hasStarted
                 ? "Generating…"
-                : "Generate Flipcast"}
+                : "Generate Flip.audio"}
           </button>
 
           {/* Error */}
