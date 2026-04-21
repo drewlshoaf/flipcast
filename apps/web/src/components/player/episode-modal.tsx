@@ -7,7 +7,6 @@ import {
   type Character,
   type SequenceItem,
   type SequencePlan,
-  type TranscriptTurn,
 } from "@flipcast/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 
@@ -22,9 +21,7 @@ interface EpisodeModalProps {
   playbackIndex: number;
   currentItem: SequenceItem | null;
   currentSrc: string | null;
-  welcomeText: string | null;
   characters: Character[] | null;
-  sceneTurns: Record<number, TranscriptTurn[]>;
   onEnded: () => void;
 }
 
@@ -61,22 +58,6 @@ const AD_GRADIENTS: Record<AdAccent, { bg: string; chip: string; pill: string }>
   },
 };
 
-function itemTypeLabel(item: SequenceItem): string {
-  if (item.kind === "station_intro") return "INTRO";
-  if (item.kind === "ad") return "AD";
-  if (item.kind === "welcome") return "WELCOME";
-  return item.isFinal ? "CLOSING" : "SCENE";
-}
-
-function itemTitle(item: SequenceItem, totalAds: number): string {
-  if (item.kind === "station_intro") return "Station intro";
-  if (item.kind === "ad") return `Ad break ${item.adIndex + 1} of ${totalAds}`;
-  if (item.kind === "welcome") return "Welcome in";
-  return item.isFinal
-    ? `Scene ${item.sceneIndex} — closing`
-    : `Scene ${item.sceneIndex}`;
-}
-
 export function EpisodeModal(props: EpisodeModalProps) {
   const {
     open,
@@ -87,21 +68,34 @@ export function EpisodeModal(props: EpisodeModalProps) {
     playbackIndex,
     currentItem,
     currentSrc,
-    welcomeText,
     characters,
-    sceneTurns,
     onEnded,
   } = props;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [paused, setPaused] = useState(false);
 
-  // Reset timing when the src rotates so the progress bar doesn't snap weird.
+  // Reset timing + resume from paused when the src rotates so the progress
+  // bar doesn't snap weird and the next item doesn't inherit a paused state.
   useEffect(() => {
     setCurrentTime(0);
     setDuration(0);
+    setPaused(false);
   }, [currentSrc]);
+
+  function togglePause() {
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) {
+      a.play().catch(() => {
+        /* autoplay policy may block — user gesture should be enough */
+      });
+    } else {
+      a.pause();
+    }
+  }
 
   // Lock the body scroll while the modal is open so the rest of the page
   // genuinely feels "locked".
@@ -185,25 +179,43 @@ export function EpisodeModal(props: EpisodeModalProps) {
           </header>
 
           {/* Progress — passive, not scrubbable */}
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-200/70">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-brand-gradient transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-            {isWaiting && (
-              <div className="absolute inset-0 overflow-hidden">
-                <div className="h-full w-1/3 -translate-x-full animate-shimmer-bar bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-              </div>
-            )}
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={togglePause}
+              disabled={!currentSrc}
+              aria-label={paused ? "Play" : "Pause"}
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-gradient text-white shadow-glow transition hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {paused ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+                  <path d="M7 5v14l12-7-12-7z" fill="white" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
+                  <rect x="6" y="5" width="4" height="14" rx="1" fill="white" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" fill="white" />
+                </svg>
+              )}
+            </button>
+            <div className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-slate-200/70">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full bg-brand-gradient transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+              {isWaiting && !paused && (
+                <div className="absolute inset-0 overflow-hidden">
+                  <div className="h-full w-1/3 -translate-x-full animate-shimmer-bar bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Now-playing panel */}
           <NowPlaying
             item={currentItem}
             totalAds={plan?.totalAds ?? 0}
-            welcomeText={welcomeText}
             characters={characters}
-            sceneTurns={sceneTurns}
           />
 
           {/* Always-visible promo box */}
@@ -216,6 +228,8 @@ export function EpisodeModal(props: EpisodeModalProps) {
           ref={audioRef}
           src={currentSrc ?? undefined}
           autoPlay
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
           onEnded={onEnded}
@@ -228,111 +242,58 @@ export function EpisodeModal(props: EpisodeModalProps) {
 function NowPlaying({
   item,
   totalAds,
-  welcomeText,
   characters,
-  sceneTurns,
 }: {
   item: SequenceItem | null;
   totalAds: number;
-  welcomeText: string | null;
   characters: Character[] | null;
-  sceneTurns: Record<number, TranscriptTurn[]>;
 }) {
-  if (!item) {
-    return (
-      <div className="rounded-3xl bg-white/60 p-5 text-sm text-ink-500 ring-1 ring-slate-200/70">
-        Getting your Flipcast ready…
-      </div>
-    );
-  }
-
-  if (item.kind === "station_intro" || item.kind === "welcome") {
-    return (
-      <WelcomePanel
-        kind={item.kind}
-        welcomeText={welcomeText}
-        characters={characters}
-      />
-    );
-  }
-
-  if (item.kind === "ad") {
+  if (item && item.kind === "ad") {
     return <AdPanel slotIndex={item.adIndex} totalAds={totalAds} />;
   }
-
-  return <ScenePanel item={item} turns={sceneTurns[item.sceneIndex] ?? []} />;
+  return <CastPanel characters={characters} />;
 }
 
-function WelcomePanel({
-  kind,
-  welcomeText,
-  characters,
-}: {
-  kind: "station_intro" | "welcome";
-  welcomeText: string | null;
-  characters: Character[] | null;
-}) {
-  const showWelcomeText = kind === "welcome" && !!welcomeText;
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-3xl bg-white/70 p-5 ring-1 ring-slate-200/70">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-          {kind === "station_intro" ? "Station intro" : "Welcome"}
-        </div>
-        {kind === "station_intro" && (
-          <p className="text-base leading-relaxed text-ink-700">
-            Thanks for choosing Flipcast. We're assembling your Flipcast and
-            will be with you shortly — right after these short ads.
-          </p>
-        )}
-        {showWelcomeText && (
-          <p className="whitespace-pre-line text-base leading-relaxed text-ink-700">
-            {welcomeText}
-          </p>
-        )}
-        {!showWelcomeText && kind === "welcome" && (
-          <p className="text-sm italic text-ink-400">
-            Writing the welcome…
-          </p>
-        )}
+function CastPanel({ characters }: { characters: Character[] | null }) {
+  if (!characters || characters.length === 0) {
+    return (
+      <div className="rounded-3xl bg-white/60 p-5 text-sm italic text-ink-400 ring-1 ring-slate-200/70">
+        Casting the show…
       </div>
-
-      {characters && characters.length > 0 && (
-        <div>
-          <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-            Cast
-          </div>
-          <div className="grid grid-cols-1 gap-2">
-            {characters.map((c) => (
-              <div
-                key={c.role}
-                className="rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/70"
+    );
+  }
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
+        Cast
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        {characters.map((c) => (
+          <div
+            key={c.role}
+            className="rounded-2xl bg-white/70 p-3 ring-1 ring-slate-200/70"
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-semibold text-ink-900">
+                {c.name}
+              </span>
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${
+                  c.role === "moderator" ? "text-pink-600" : "text-sky-600"
+                }`}
               >
-                <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-semibold text-ink-900">
-                    {c.name}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-                    {c.role === "moderator"
-                      ? "Moderator"
-                      : c.role === "panelist_1"
-                        ? "Panelist"
-                        : "Panelist"}
-                  </span>
-                  <span className="ml-auto text-[11px] text-ink-400">
-                    {c.voiceLabel}
-                  </span>
-                </div>
-                {c.bio && (
-                  <div className="mt-1 text-xs italic text-ink-500">
-                    {c.bio}
-                  </div>
-                )}
-              </div>
-            ))}
+                {c.role === "moderator" ? "Moderator" : "Panelist"}
+              </span>
+              <span className="ml-auto text-[11px] text-ink-400">
+                {c.voiceLabel}
+              </span>
+            </div>
+            {c.bio && (
+              <div className="mt-1 text-xs italic text-ink-500">{c.bio}</div>
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -388,32 +349,3 @@ function AdPanel({
   );
 }
 
-function ScenePanel({
-  item,
-  turns,
-}: {
-  item: Extract<SequenceItem, { kind: "scene" }>;
-  turns: TranscriptTurn[];
-}) {
-  return (
-    <div className="rounded-3xl bg-white/70 p-5 ring-1 ring-slate-200/70">
-      <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-sky-600">
-        {itemTypeLabel(item)}
-      </div>
-      <div className="text-base font-semibold text-ink-900">
-        {itemTitle(item, 0).replace(/^Scene /, "Scene ")}
-      </div>
-      {turns.length === 0 ? (
-        <p className="mt-3 text-sm italic text-ink-400">
-          Writing this scene…
-        </p>
-      ) : (
-        <div className="mt-3 flex max-h-64 flex-col gap-2 overflow-y-auto pr-1 text-sm leading-relaxed text-ink-700">
-          {turns.map((t) => (
-            <p key={t.sequence}>{t.text}</p>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

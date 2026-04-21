@@ -899,9 +899,7 @@ export function StudioClient({
         playbackIndex={playback.index}
         currentItem={currentItem ?? null}
         currentSrc={currentSrc}
-        welcomeText={welcomeText}
         characters={characters}
-        sceneTurns={sceneTurns}
         onEnded={handleTrackEnded}
       />
 
