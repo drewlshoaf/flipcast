@@ -17,6 +17,9 @@ export const env = {
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   defaultSpeed: clampSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
+  authSecret: process.env.AUTH_SECRET ?? "",
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
 };
 
 function clampSpeed(raw: string | undefined, fallback: number): number {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 
 const PROMPT_CHIPS = [
   "Why is matcha everywhere now?",
@@ -86,7 +87,11 @@ const ACCENT_MAP = {
   mint: "from-emerald-400/40 to-emerald-200/0",
 } as const;
 
-export function HomePage() {
+interface HomePageProps {
+  sessionUser: SessionUser | null;
+}
+
+export function HomePage({ sessionUser }: HomePageProps) {
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-6 md:px-10">
       {/* Masthead */}
@@ -104,13 +109,16 @@ export function HomePage() {
             Flipcast
           </span>
         </div>
-        <Link
-          href={studioHref()}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-ink-900 px-5 text-sm font-semibold text-white transition hover:scale-[1.02]"
-        >
-          Open Studio
-          <span aria-hidden>→</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={studioHref()}
+            className="hidden h-10 items-center gap-2 rounded-full bg-ink-900 px-5 text-sm font-semibold text-white transition hover:scale-[1.02] sm:inline-flex"
+          >
+            Open Studio
+            <span aria-hidden>→</span>
+          </Link>
+          <UserChip user={sessionUser} loginNext="/studio" />
+        </div>
       </header>
 
       {/* Hero */}

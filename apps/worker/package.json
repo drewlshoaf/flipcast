@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "ads": "tsx scripts/generate-ads.ts",
     "voice-samples": "tsx scripts/generate-voice-samples.ts",
-    "intro": "tsx scripts/generate-intro.ts"
+    "intro": "tsx scripts/generate-intro.ts",
+    "seed-ads": "tsx scripts/seed-ads.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",

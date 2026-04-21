@@ -16,6 +16,7 @@ import { publishSseEvent, createRedisPublisher } from "@flipcast/queue";
 import { db } from "@/lib/db";
 import { flipcastQueue } from "@/lib/queue";
 import { env } from "@/lib/env";
+import { getSession } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -66,9 +67,13 @@ export async function POST(req: Request) {
   const sequence = planSequence(input.lengthMinutes);
   const targetSeconds = Math.round(input.lengthMinutes * 60);
 
+  const session = await getSession();
+  const userId = session?.user?.id ?? null;
+
   const [request] = await db
     .insert(flipcastRequests)
     .values({
+      userId,
       topic: input.topic,
       requestedDurationLabel: `${input.lengthMinutes} min`,
       requestedDurationSecondsTarget: targetSeconds,

@@ -26,6 +26,7 @@ import type {
 } from "@flipcast/types";
 import { IdeaRail } from "./idea-rail";
 import { PreviewPlayer } from "./preview-player";
+import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 
 const ROLE_LABEL: Record<Character["role"], string> = {
   moderator: "Moderator",
@@ -100,11 +101,13 @@ const VIBE_ACCENTS: Record<
 interface StudioClientProps {
   defaultSpeed: number;
   initialTopic?: string;
+  sessionUser: SessionUser | null;
 }
 
 export function StudioClient({
   defaultSpeed,
   initialTopic = "",
+  sessionUser,
 }: StudioClientProps) {
   const [topic, setTopic] = useState(initialTopic);
   const [format, setFormat] = useState<FlipcastFormat>("panel");
@@ -135,6 +138,7 @@ export function StudioClient({
   const [topicContext, setTopicContext] = useState<string | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
   const [sceneUrls, setSceneUrls] = useState<Record<number, string>>({});
+  const [adRotation, setAdRotation] = useState<string[] | null>(null);
   const [sceneTurns, setSceneTurns] = useState<
     Record<number, TranscriptTurn[]>
   >({});
@@ -214,7 +218,12 @@ export function StudioClient({
 
   function srcForItem(item: SequenceItem): string | null {
     if (item.kind === "station_intro") return "/station/intro.mp3";
-    if (item.kind === "ad") return `/ads/ad-${item.adIndex + 1}.mp3`;
+    if (item.kind === "ad") {
+      if (adRotation && adRotation.length > 0) {
+        return adRotation[item.adIndex % adRotation.length] ?? null;
+      }
+      return `/ads/ad-${item.adIndex + 1}.mp3`;
+    }
     if (item.kind === "welcome") return welcomeUrl;
     if (item.kind === "scene") return sceneUrls[item.sceneIndex] ?? null;
     return null;
@@ -251,7 +260,17 @@ export function StudioClient({
     setSceneUrls({});
     setSceneTurns({});
     setPlan(null);
+    setAdRotation(null);
     setPlayback({ stage: "idle", index: 0 });
+    // Fire ad rotation in parallel with the cast submission so it's ready
+    // by the time the player needs ad URLs.
+    void fetch("/api/ads/rotation?count=5", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        const list = d?.ads as { url: string }[] | undefined;
+        if (Array.isArray(list)) setAdRotation(list.map((a) => a.url));
+      })
+      .catch(() => void 0);
     try {
       const res = await fetch("/api/flipcasts", {
         method: "POST",
@@ -376,6 +395,14 @@ export function StudioClient({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="chip chip-slate">~{estMinutes} min</span>
+          {sessionUser && (
+            <Link
+              href="/library"
+              className="inline-flex h-10 items-center rounded-full bg-white/70 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
+            >
+              My library
+            </Link>
+          )}
           <button
             type="button"
             onClick={handleSaveDraft}
@@ -390,6 +417,7 @@ export function StudioClient({
           >
             Share
           </button>
+          <UserChip user={sessionUser} loginNext="/studio" />
         </div>
       </header>
 

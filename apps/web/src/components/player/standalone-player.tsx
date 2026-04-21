@@ -67,6 +67,7 @@ export function StandalonePlayer({ requestId }: Props) {
   const [plan, setPlan] = useState<SequencePlan | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
   const [sceneUrls, setSceneUrls] = useState<Record<number, string>>({});
+  const [adRotation, setAdRotation] = useState<string[] | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
   const [index, setIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -119,6 +120,30 @@ export function StandalonePlayer({ requestId }: Props) {
     };
   }, [requestId]);
 
+  // Fresh ad rotation per playback (interest-targeted if signed in).
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAds() {
+      try {
+        const res = await fetch("/api/ads/rotation?count=5", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { ads?: { url: string }[] };
+        if (cancelled) return;
+        if (Array.isArray(data.ads)) {
+          setAdRotation(data.ads.map((a) => a.url));
+        }
+      } catch {
+        /* keep static fallback */
+      }
+    }
+    void loadAds();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId]);
+
   // SSE — only if not yet complete
   useEffect(() => {
     if (!row) return;
@@ -159,7 +184,12 @@ export function StandalonePlayer({ requestId }: Props) {
 
   function srcForItem(item: SequenceItem): string | null {
     if (item.kind === "station_intro") return "/station/intro.mp3";
-    if (item.kind === "ad") return `/ads/ad-${item.adIndex + 1}.mp3`;
+    if (item.kind === "ad") {
+      if (adRotation && adRotation.length > 0) {
+        return adRotation[item.adIndex % adRotation.length] ?? null;
+      }
+      return `/ads/ad-${item.adIndex + 1}.mp3`;
+    }
     if (item.kind === "welcome") return welcomeUrl;
     if (item.kind === "scene") return sceneUrls[item.sceneIndex] ?? null;
     return null;

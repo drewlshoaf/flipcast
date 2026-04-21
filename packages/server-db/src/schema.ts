@@ -8,6 +8,7 @@ import {
   jsonb,
   real,
   pgEnum,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -43,8 +44,12 @@ export const speakerRoleEnum = pgEnum("speaker_role", [
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
+  emailVerified: timestamp("email_verified", { withTimezone: true, mode: "date" }),
+  name: text("name"),
+  image: text("image"),
   passwordHash: text("password_hash"),
   planTier: planTierEnum("plan_tier").notNull().default("free"),
+  interests: text("interests").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -52,6 +57,46 @@ export const users = pgTable("users", {
     .notNull()
     .defaultNow(),
 });
+
+// Ad inventory served dynamically per playback so replays get fresh ads,
+// optionally targeted by user interests.
+export const ads = pgTable("ads", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  product: text("product").notNull(),
+  voiceId: text("voice_id").notNull(),
+  audioUrl: text("audio_url").notNull(),
+  durationSeconds: integer("duration_seconds").notNull().default(25),
+  interests: text("interests").array().notNull().default([]),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Auth.js account linkage — one row per OAuth provider account connected to a user.
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+  }),
+);
 
 export const flipcastRequests = pgTable("flipcast_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
