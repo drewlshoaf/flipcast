@@ -599,6 +599,12 @@ function TranscriptPanel({
                   const char = characterByRole.get(t.speaker);
                   const isActive =
                     isActiveScene && t.speaker === currentSpeaker;
+                  const speakerIdx =
+                    t.speaker === "moderator"
+                      ? 0
+                      : t.speaker === "panelist_1"
+                        ? 1
+                        : 2;
                   return (
                     <div
                       key={t.sequence}
@@ -610,11 +616,15 @@ function TranscriptPanel({
                       }`}
                     >
                       <div
-                        className={`mb-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${
+                        className={`mb-0.5 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] ${
                           isActive ? "text-pink-600" : "text-ink-400"
                         }`}
                       >
-                        {char ? char.name : t.speaker}
+                        <span className="font-mono normal-case tracking-normal text-ink-500">
+                          {`<|speaker:${speakerIdx}|>`}
+                        </span>
+                        <span>·</span>
+                        <span>{char ? char.name : t.speaker}</span>
                       </div>
                       <div>{t.text}</div>
                     </div>

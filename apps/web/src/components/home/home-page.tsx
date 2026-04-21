@@ -3,28 +3,43 @@ import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
 import { SurpriseMe } from "@/components/home/surprise-me";
 
-const SUPPORT_FEATURES = [
-  {
-    label: "Start from any spark",
-    body: "A headline, a question, a hot take. Anything you can't stop thinking about.",
-    chip: "chip-sky",
-  },
-  {
-    label: "Idea to episode, fast",
-    body: "Tap, listen. The first audio plays while the rest is still being made.",
-    chip: "chip-pink",
-  },
-  {
-    label: "Bright by default",
-    body: "Real voices, real pacing, real character. Designed for the ear, not the dashboard.",
-    chip: "chip-mint",
-  },
-  {
-    label: "Fun before friction",
-    body: "No long forms. No setup. Surprise yourself, then remix in the studio.",
-    chip: "chip-slate",
-  },
+// More sample prompts shown below the hero. Distinct from the BUBBLES cloud
+// so the page doesn't feel like the same list twice. Tagged with an accent
+// to keep the colorway consistent with the rest of the brand.
+const MORE_PROMPTS: { text: string; accent: "sky" | "pink" | "mint" | "violet" | "amber" }[] = [
+  { text: "the truth about gut-health hype", accent: "mint" },
+  { text: "why is everyone leaving X for Bluesky?", accent: "sky" },
+  { text: "is print magazines having a moment?", accent: "amber" },
+  { text: "the new etiquette of voice notes", accent: "pink" },
+  { text: "why standup is bigger than ever", accent: "violet" },
+  { text: "what happened to indie movie theaters?", accent: "amber" },
+  { text: "the strange economy of livestream poker", accent: "sky" },
+  { text: "are gen-z really drinking less?", accent: "pink" },
+  { text: "the secret history of the Costco hot dog", accent: "amber" },
+  { text: "is fitness culture eating wellness alive?", accent: "mint" },
+  { text: "why nobody can agree on what 'AI' means", accent: "violet" },
+  { text: "the comeback of in-person book clubs", accent: "pink" },
+  { text: "what's actually happening with the housing market", accent: "sky" },
+  { text: "why Formula 1 finally cracked America", accent: "violet" },
+  { text: "the case for boring vacations", accent: "mint" },
+  { text: "is everyone secretly burned out on AI?", accent: "amber" },
 ];
+
+const ACCENT_TILE: Record<string, string> = {
+  sky: "bg-sky-50 ring-sky-100 hover:ring-sky-200",
+  pink: "bg-pink-50 ring-pink-100 hover:ring-pink-200",
+  mint: "bg-emerald-50 ring-emerald-100 hover:ring-emerald-200",
+  violet: "bg-violet-50 ring-violet-100 hover:ring-violet-200",
+  amber: "bg-amber-50 ring-amber-100 hover:ring-amber-200",
+};
+
+const ACCENT_DOT: Record<string, string> = {
+  sky: "bg-sky-400",
+  pink: "bg-pink-400",
+  mint: "bg-emerald-400",
+  violet: "bg-violet-400",
+  amber: "bg-amber-400",
+};
 
 function studioHref(topic?: string): string {
   if (!topic) return "/studio";
@@ -114,9 +129,9 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </h1>
 
           <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-500 md:text-lg">
-            flip.audio should feel like play, not setup. Start from any tiny
-            spark — a question, a rumor, a hot take, a trend — and jump straight
-            into a fresh episode.
+            Drop a topic — a headline, a hot take, something you can't stop
+            thinking about — and flip.audio produces an episode you can play
+            right now.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
@@ -149,17 +164,37 @@ export function HomePage({ sessionUser }: HomePageProps) {
         </div>
       </section>
 
-      {/* Support features */}
+      {/* More sample prompts */}
       <section className="mb-12">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          {SUPPORT_FEATURES.map((f) => (
-            <div
-              key={f.label}
-              className="rounded-3xl bg-white/70 p-5 ring-1 ring-slate-200/70 transition hover:shadow-card"
+        <div className="mb-6 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-ink-900 md:text-3xl">
+              More to start from.
+            </h2>
+            <p className="mt-1 text-sm text-ink-500">
+              Tap any prompt — the studio opens with it filled in.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {MORE_PROMPTS.map((p) => (
+            <Link
+              key={p.text}
+              href={studioHref(p.text)}
+              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-sm font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card ${ACCENT_TILE[p.accent]}`}
             >
-              <span className={`chip ${f.chip} mb-3`}>{f.label}</span>
-              <p className="text-sm leading-relaxed text-ink-500">{f.body}</p>
-            </div>
+              <span
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACCENT_DOT[p.accent]}`}
+                aria-hidden
+              />
+              <span className="leading-snug">{p.text}</span>
+              <span
+                className="ml-auto text-ink-400 transition group-hover:translate-x-0.5"
+                aria-hidden
+              >
+                →
+              </span>
+            </Link>
           ))}
         </div>
       </section>

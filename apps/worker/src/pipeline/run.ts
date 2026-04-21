@@ -12,7 +12,6 @@ import {
   emptyClaudeUsage,
   mergeClaudeUsage,
   type TtsEngine,
-  type TtsProvider,
   type Character,
   type ClaudeCallUsage,
   type ClaudeUsageAggregate,
@@ -32,13 +31,62 @@ import {
   generateFullNewscast,
 } from "../clients/anthropic";
 import { synthesizeSegment } from "../clients/tts";
+import { synthesizeWithFishMulti } from "../clients/fish";
 import { uploadObject } from "../clients/s3";
-import { stitchSegments } from "./stitch";
+import { spawn } from "node:child_process";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-const CONCURRENCY_LIMIT: Record<TtsProvider, number> = {
-  polly: 10,
-  fish: 5,
+// Map a TranscriptTurn's speaker role to the Fish multi-speaker index. The
+// reference_id array is built in this same order below.
+const ROLE_TO_SPEAKER: Record<SpeakerRole, number> = {
+  moderator: 0,
+  panelist_1: 1,
+  panelist_2: 2,
 };
+
+// Translate a turn's numeric pauseMsAfter into an inline Fish tag. Fish
+// renders the tag as actual silence; no post-hoc stitching needed.
+function pauseTagForMs(ms: number): string {
+  if (ms >= 1500) return " [long pause]";
+  if (ms >= 800) return " [pause]";
+  if (ms >= 300) return " [short pause]";
+  return "";
+}
+
+// Probe the duration of an mp3 Buffer via ffprobe (writes to a temp file,
+// reads `format=duration`, cleans up). Used to record durationMs on the
+// scene's audio_asset row for the admin reporting view.
+async function probeMp3DurationMsFromBuffer(buf: Buffer): Promise<number> {
+  const workDir = await mkdtemp(join(tmpdir(), "flipcast-probe-"));
+  const filePath = join(workDir, "a.mp3");
+  try {
+    await writeFile(filePath, buf);
+    return await new Promise<number>((resolve, reject) => {
+      const proc = spawn("ffprobe", [
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        filePath,
+      ]);
+      let out = "";
+      proc.stdout.on("data", (c) => (out += c.toString()));
+      proc.on("error", reject);
+      proc.on("close", (code) => {
+        if (code !== 0) return reject(new Error(`ffprobe exit ${code}`));
+        const secs = Number(out.trim());
+        if (!Number.isFinite(secs)) return reject(new Error("bad duration"));
+        resolve(Math.round(secs * 1000));
+      });
+    });
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
+}
 
 export async function runPipeline(requestId: string): Promise<void> {
   const request = await db.query.flipcastRequests.findFirst({
@@ -232,8 +280,6 @@ export async function runPipeline(requestId: string): Promise<void> {
 
     const moderatorVoice = VOICE_BY_ID.get(voiceForRole.moderator);
     if (!moderatorVoice) throw new Error("Picked voice not in catalog.");
-    const provider: TtsProvider = moderatorVoice.provider;
-    const concurrency = CONCURRENCY_LIMIT[provider];
 
     const priorScenesBriefs: string[] = [];
     const allSceneTurns: { sceneIndex: number; turns: TranscriptTurn[] }[] =
@@ -323,73 +369,79 @@ export async function runPipeline(requestId: string): Promise<void> {
         characters.map((c) => [c.role, c] as const),
       );
       const startingSeq = await currentSegmentCount(savedTranscript.id);
-      const savedSegments = await db
-        .insert(transcriptSegments)
-        .values(
-          turns.map((t, i) => ({
-            transcriptId: savedTranscript.id,
-            sequenceNumber: startingSeq + i,
-            sceneIndex,
-            speakerRole: t.speaker,
-            speakerName:
-              characterByRole.get(t.speaker)?.name ??
-              characterByRole.get("moderator")?.name ??
-              null,
-            voiceId: voiceForRole[t.speaker] || voiceForRole.moderator,
-            text: t.text,
-            pauseMsAfter: t.pauseMsAfter,
-            isAdSegment: t.isAd,
-          })),
-        )
-        .returning();
+      await db.insert(transcriptSegments).values(
+        turns.map((t, i) => ({
+          transcriptId: savedTranscript.id,
+          sequenceNumber: startingSeq + i,
+          sceneIndex,
+          speakerRole: t.speaker,
+          speakerName:
+            characterByRole.get(t.speaker)?.name ??
+            characterByRole.get("moderator")?.name ??
+            null,
+          voiceId: voiceForRole[t.speaker] || voiceForRole.moderator,
+          text: t.text,
+          pauseMsAfter: t.pauseMsAfter,
+          isAdSegment: t.isAd,
+        })),
+      );
 
       await emit("scene_synth_started", requestId, {
-        message: `Synthesizing scene ${sceneIndex} (${savedSegments.length} turns, ${provider})…`,
+        message: `Synthesizing scene ${sceneIndex} (${turns.length} turns, fish)…`,
         data: {
           sceneIndex,
           totalScenes: plan.totalScenes,
-          turnCount: savedSegments.length,
+          turnCount: turns.length,
         },
       });
 
-      const batches: (typeof savedSegments)[] = [];
-      for (let i = 0; i < savedSegments.length; i += concurrency) {
-        batches.push(savedSegments.slice(i, i + concurrency));
-      }
-      const segmentAudios: {
-        index: number;
-        buffer: Buffer;
-        pauseMsAfter: number;
-      }[] = [];
-      for (const batch of batches) {
-        const results = await Promise.all(
-          batch.map(async (seg) => {
-            const audio = await synthesizeSegment(
-              seg.text,
-              seg.voiceId,
-              engineChoice,
-              speed,
-            );
-            const key = `requests/${requestId}/scenes/${sceneIndex}/segments/${seg.sequenceNumber}.mp3`;
-            const url = await uploadObject(key, audio, "audio/mpeg");
-            await db.insert(audioAssets).values({
-              flipcastRequestId: requestId,
-              transcriptSegmentId: seg.id,
-              assetType: "segment",
-              sceneIndex,
-              storageUrl: url,
-            });
-            return {
-              index: seg.sequenceNumber,
-              buffer: audio,
-              pauseMsAfter: seg.pauseMsAfter,
-            };
-          }),
+      // One-shot scene synthesis. Panel scenes use Fish multi-speaker with
+      // `<|speaker:N|>` tokens and an array reference_id — one mp3 per
+      // scene, no per-turn stitching. Solo (newscast) scenes concatenate
+      // turns with inline pause tags and hit the normal single-voice path.
+      let mp3: Buffer;
+      if (cfg.castSize > 1) {
+        const multiText = turns
+          .map((t) => {
+            const speakerIdx = ROLE_TO_SPEAKER[t.speaker];
+            const pause = pauseTagForMs(t.pauseMsAfter);
+            return `<|speaker:${speakerIdx}|>${t.text}${pause}`;
+          })
+          .join("\n");
+        const voices = [
+          voiceForRole.moderator,
+          voiceForRole.panelist_1,
+          voiceForRole.panelist_2,
+        ]
+          .map((id) => VOICE_BY_ID.get(id))
+          .filter((v): v is NonNullable<typeof v> => !!v);
+        if (voices.length < 2) {
+          throw new Error(
+            `Panel scene ${sceneIndex} needs ≥2 voices, got ${voices.length}`,
+          );
+        }
+        mp3 = await synthesizeWithFishMulti(multiText, voices, speed);
+      } else {
+        const soloText = turns
+          .map((t) => `${t.text}${pauseTagForMs(t.pauseMsAfter)}`)
+          .join(" ");
+        const moderatorVoiceId = voiceForRole.moderator;
+        if (!moderatorVoiceId) {
+          throw new Error(
+            `Solo scene ${sceneIndex} missing moderator voice`,
+          );
+        }
+        mp3 = await synthesizeSegment(
+          soloText,
+          moderatorVoiceId,
+          engineChoice,
+          speed,
         );
-        segmentAudios.push(...results);
       }
 
-      const { mp3, durationMs } = await stitchSegments(segmentAudios);
+      const durationMs = await probeMp3DurationMsFromBuffer(mp3).catch(
+        () => null,
+      );
       const sceneKey = `requests/${requestId}/scenes/${sceneIndex}/scene.mp3`;
       const sceneUrl = await uploadObject(sceneKey, mp3, "audio/mpeg");
       await db.insert(audioAssets).values({
