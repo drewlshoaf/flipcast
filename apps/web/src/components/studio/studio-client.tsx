@@ -4,18 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AVAILABLE_VIBES,
-  MIN_SPEED,
-  MAX_SPEED,
-  SPEED_STEP,
   UI_FORMATS,
-  VOICES,
   formatConfig,
   lengthPreset,
   type FlipcastFormat,
   type FlipcastVibe,
   type SequenceItem,
   type SequencePlan,
-  type VoiceOption,
 } from "@flipcast/types";
 import type {
   Character,
@@ -32,16 +27,61 @@ const ROLE_LABEL: Record<Character["role"], string> = {
   panelist_2: "Panelist",
 };
 
-type VoiceMode = "auto" | "pick";
 type VoiceEngine = "elevenlabs" | "fish";
 type PlaybackStage = "idle" | "playing" | "waiting" | "finished";
 
-const TOPIC_HELPERS = [
-  "A headline",
-  "A question",
-  "A hot take",
-  "Something you keep thinking about",
+// Clickable topic helpers. Each category has a pool; clicking a chip picks a
+// random prompt from the pool and drops it in the topic field.
+const TOPIC_HELPERS: { label: string; prompts: string[] }[] = [
+  {
+    label: "Headline",
+    prompts: [
+      "The quiet consolidation happening in independent journalism",
+      "Why everyone's suddenly rethinking the four-day workweek",
+      "The unexpected comeback of nuclear power in blue states",
+      "What's actually driving the matcha boom everywhere",
+      "The real story behind the latest AI hiring freeze",
+      "Why satellite launches are suddenly a political fight",
+    ],
+  },
+  {
+    label: "Question",
+    prompts: [
+      "Why is matcha suddenly everywhere?",
+      "Are group chats ruining our attention spans?",
+      "Is the creator economy actually sustainable?",
+      "Why does nobody agree on what 'AI' even means?",
+      "When did dinner parties quietly come back?",
+      "Is remote work winning or losing the long game?",
+    ],
+  },
+  {
+    label: "Hot take",
+    prompts: [
+      "The four-day workweek is already dead — nobody wants to admit it",
+      "Podcasts are the new talk radio and nobody's saying it",
+      "Streaming services peaked two years ago and it's all downhill",
+      "Generative AI is a worse version of Google and people prefer it",
+      "Nobody actually reads newsletters — we just feel guilty about them",
+      "Crypto didn't fail, it just got boring, which is worse",
+    ],
+  },
+  {
+    label: "People are talking about",
+    prompts: [
+      "Why everyone keeps soft-launching relationships on Instagram",
+      "The great backlash against group chats that never end",
+      "Dating app fatigue and what's actually replacing them",
+      "Why 'quiet luxury' burned out in eighteen months",
+      "Workplace Slack etiquette wars that have gotten weird",
+      "The unironic comeback of the landline",
+    ],
+  },
 ];
+
+function pickRandom<T>(list: T[]): T {
+  return list[Math.floor(Math.random() * list.length)]!;
+}
 
 const REMIX_ACTIONS = [
   { id: "shorter-intro", label: "Shorter intro" },
@@ -98,7 +138,7 @@ const VIBE_ACCENTS: Record<
 };
 
 interface StudioClientProps {
-  defaultSpeed: number;
+  defaultEngine: VoiceEngine;
   initialTopic?: string;
   initialFormat?: FlipcastFormat;
   initialVibe?: FlipcastVibe;
@@ -108,7 +148,7 @@ interface StudioClientProps {
 }
 
 export function StudioClient({
-  defaultSpeed,
+  defaultEngine,
   initialTopic = "",
   initialFormat,
   initialVibe,
@@ -119,33 +159,15 @@ export function StudioClient({
   const [topic, setTopic] = useState(initialTopic);
   const [format, setFormat] = useState<FlipcastFormat>(initialFormat ?? "panel");
   const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "serious");
-  const [speed, setSpeed] = useState<number>(defaultSpeed);
-  const [voiceMode, setVoiceMode] = useState<VoiceMode>("auto");
-  const [voiceEngine, setVoiceEngine] = useState<VoiceEngine>(
-    initialEngine ?? "elevenlabs",
-  );
-  const [pickedVoices, setPickedVoices] = useState<string[]>([]);
-  const [showSecondary, setShowSecondary] = useState(false);
   const autoStartFiredRef = useRef(false);
+
+  // Engine is admin-controlled via FLIPCAST_DEFAULT_ENGINE; only override if
+  // the URL explicitly carried an engine (e.g. persisted across a signup
+  // redirect). No user-facing toggle.
+  const voiceEngine: VoiceEngine = initialEngine ?? defaultEngine;
 
   const lengthMinutes = lengthPreset("long").minutes;
   const cfg = formatConfig(format);
-  const eligibleVoices = useMemo(
-    () =>
-      VOICES.filter(
-        (v) =>
-          !v.adOnly &&
-          v.provider === voiceEngine &&
-          v.engines.includes(voiceEngine),
-      ),
-    [voiceEngine],
-  );
-
-  // Clear any voice picks when the user switches format or engine — the
-  // previous picks may no longer be valid for the new pool.
-  useEffect(() => {
-    setPickedVoices([]);
-  }, [format, voiceEngine]);
 
   // Session / generation state
   const [submitting, setSubmitting] = useState(false);
@@ -267,12 +289,6 @@ export function StudioClient({
       setError("Give us a topic with at least a few words.");
       return;
     }
-    if (voiceMode === "pick" && pickedVoices.length !== cfg.castSize) {
-      setError(
-        `This format needs ${cfg.castSize} voice${cfg.castSize > 1 ? "s" : ""}.`,
-      );
-      return;
-    }
     // Gate first generation behind signup. Preserve topic/format/vibe/engine
     // so the user lands back in Studio with their work intact, and set
     // auto=1 so the next page load fires Generate automatically.
@@ -320,8 +336,6 @@ export function StudioClient({
           format,
           vibe,
           lengthMinutes,
-          speed,
-          voiceIds: voiceMode === "pick" ? pickedVoices : undefined,
           engine: voiceEngine,
         }),
       });
@@ -450,7 +464,7 @@ export function StudioClient({
 
   function handleSaveDraft() {
     if (typeof window === "undefined") return;
-    const draft = { topic, format, vibe, speed, voiceMode, voiceEngine, pickedVoices };
+    const draft = { topic, format, vibe };
     try {
       window.localStorage.setItem("flipcast:draft", JSON.stringify(draft));
       setToast("Draft saved");
@@ -546,9 +560,15 @@ export function StudioClient({
 
             <div className="mt-3 flex flex-wrap gap-2">
               {TOPIC_HELPERS.map((h) => (
-                <span key={h} className="chip chip-slate">
-                  {h}
-                </span>
+                <button
+                  key={h.label}
+                  type="button"
+                  onClick={() => setTopic(pickRandom(h.prompts))}
+                  title={`Drop a random ${h.label.toLowerCase()} into the topic`}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:text-ink-900 hover:shadow-card"
+                >
+                  <span aria-hidden>✨</span> {h.label}
+                </button>
               ))}
             </div>
           </section>
@@ -673,144 +693,7 @@ export function StudioClient({
             </div>
           </section>
 
-          {/* Secondary controls */}
-          <section className="rounded-3xl bg-white/50 p-5 ring-1 ring-slate-200/60">
-            <button
-              type="button"
-              onClick={() => setShowSecondary((v) => !v)}
-              className="flex w-full items-center justify-between text-left"
-            >
-              <div>
-                <div className="text-sm font-semibold text-ink-900">
-                  Fine-tune
-                </div>
-                <div className="text-xs text-ink-400">
-                  Speed · voice mode · voice picks. Strong defaults already set.
-                </div>
-              </div>
-              <span className="text-sm text-ink-500">
-                {showSecondary ? "Hide" : "Show"}
-              </span>
-            </button>
-
-            {showSecondary && (
-              <div className="mt-5 flex flex-col gap-5">
-                <div>
-                  <div className="mb-2 flex items-center justify-between text-sm">
-                    <span className="font-medium text-ink-700">Voice engine</span>
-                    <span className="text-xs text-ink-400">
-                      Swaps the provider for every scene voice
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setVoiceEngine("elevenlabs")}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                        voiceEngine === "elevenlabs"
-                          ? "bg-brand-gradient text-white shadow-card"
-                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
-                      }`}
-                    >
-                      ElevenLabs
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVoiceEngine("fish")}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                        voiceEngine === "fish"
-                          ? "bg-brand-gradient text-white shadow-card"
-                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
-                      }`}
-                    >
-                      Fish Audio
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="font-medium text-ink-700">
-                      Speaker speed
-                    </span>
-                    <span className="font-mono text-ink-500">
-                      {speed.toFixed(2)}x
-                      {Math.abs(speed - defaultSpeed) < 0.001
-                        ? " · default"
-                        : ""}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={MIN_SPEED}
-                    max={MAX_SPEED}
-                    step={SPEED_STEP}
-                    value={speed}
-                    onChange={(e) => setSpeed(Number(e.target.value))}
-                    className="w-full accent-pink-500"
-                  />
-                </div>
-
-                <div>
-                  <div className="mb-2 text-sm font-medium text-ink-700">
-                    Voices
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setVoiceMode("auto")}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                        voiceMode === "auto"
-                          ? "bg-brand-gradient text-white shadow-card"
-                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
-                      }`}
-                    >
-                      Auto-cast voices
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setVoiceMode("pick")}
-                      className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                        voiceMode === "pick"
-                          ? "bg-brand-gradient text-white shadow-card"
-                          : "bg-white/80 text-ink-700 ring-1 ring-slate-200"
-                      }`}
-                    >
-                      Pick my own ({cfg.castSize})
-                    </button>
-                  </div>
-
-                  {voiceMode === "pick" && (
-                    <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3">
-                      {eligibleVoices.map((v) => (
-                        <VoiceCard
-                          key={v.id}
-                          voice={v}
-                          selected={pickedVoices.includes(v.id)}
-                          disabled={
-                            !pickedVoices.includes(v.id) &&
-                            pickedVoices.length >= cfg.castSize
-                          }
-                          onToggle={() => {
-                            setPickedVoices((prev) =>
-                              prev.includes(v.id)
-                                ? prev.filter((x) => x !== v.id)
-                                : [...prev, v.id],
-                            );
-                          }}
-                        />
-                      ))}
-                      <div className="col-span-full text-xs text-ink-400">
-                        Selected: {pickedVoices.length} / {cfg.castSize}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Generate CTA — lives directly under Fine-tune */}
+          {/* Generate CTA */}
           <button
             type="button"
             onClick={submit}
@@ -1078,78 +961,3 @@ export function StudioClient({
   );
 }
 
-function VoiceCard({
-  voice,
-  selected,
-  disabled,
-  onToggle,
-}: {
-  voice: VoiceOption;
-  selected: boolean;
-  disabled: boolean;
-  onToggle: () => void;
-}) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-
-  function togglePreview(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    const a = audioRef.current;
-    if (!a) return;
-    if (playing) {
-      a.pause();
-      a.currentTime = 0;
-      setPlaying(false);
-    } else {
-      a.play().then(
-        () => setPlaying(true),
-        () => setPlaying(false),
-      );
-    }
-  }
-
-  return (
-    <div
-      onClick={() => !disabled && onToggle()}
-      className={`cursor-pointer rounded-2xl bg-white/80 p-3 ring-1 transition ${
-        selected
-          ? "ring-2 ring-sky-400 shadow-card"
-          : "ring-slate-200 hover:ring-sky-200"
-      } ${disabled ? "cursor-not-allowed opacity-40" : ""}`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold text-ink-900">
-            {voice.label}
-          </div>
-          <div className="text-[11px] capitalize text-ink-400">
-            {voice.gender} · {voice.origin}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={togglePreview}
-          className="grid h-8 w-8 place-items-center rounded-full bg-brand-gradient text-white shadow-card transition active:scale-95"
-        >
-          {playing ? (
-            <svg width="10" height="10" viewBox="0 0 24 24">
-              <rect x="6" y="5" width="4" height="14" rx="1" fill="white" />
-              <rect x="14" y="5" width="4" height="14" rx="1" fill="white" />
-            </svg>
-          ) : (
-            <svg width="10" height="10" viewBox="0 0 24 24">
-              <path d="M7 5v14l12-7-12-7z" fill="white" />
-            </svg>
-          )}
-        </button>
-      </div>
-      <audio
-        ref={audioRef}
-        src={`/voice-samples/${voice.id}.mp3`}
-        preload="none"
-        onEnded={() => setPlaying(false)}
-      />
-    </div>
-  );
-}

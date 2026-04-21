@@ -48,6 +48,7 @@ export default async function StudioPage({ searchParams }: StudioPageProps) {
   return (
     <StudioClient
       defaultSpeed={env.defaultSpeed}
+      defaultEngine={env.defaultEngine}
       initialTopic={initialTopic}
       initialFormat={initialFormat}
       initialVibe={initialVibe}

@@ -17,6 +17,7 @@ export const env = {
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   defaultSpeed: clampSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
+  defaultEngine: resolveEngine(process.env.FLIPCAST_DEFAULT_ENGINE),
   authSecret: process.env.AUTH_SECRET ?? "",
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
@@ -27,6 +28,12 @@ function clampSpeed(raw: string | undefined, fallback: number): number {
   const n = Number(raw);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(1.2, Math.max(0.7, n));
+}
+
+function resolveEngine(raw: string | undefined): "elevenlabs" | "fish" {
+  const v = raw?.trim().toLowerCase();
+  if (v === "elevenlabs" || v === "fish") return v;
+  return "fish";
 }
 
 export { required };

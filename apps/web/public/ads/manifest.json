@@ -2,48 +2,48 @@
   {
     "index": 1,
     "product": "NapkinSleep Mattress",
-    "voice": "Marcus",
-    "engine": "elevenlabs-flash",
+    "voice": "Jim",
+    "engine": "fish",
     "url": "/ads/ad-1.mp3",
     "targetSeconds": 25
   },
   {
     "index": 2,
     "product": "FarmBox Meal Kits",
-    "voice": "Samantha",
-    "engine": "elevenlabs-flash",
+    "voice": "Paula",
+    "engine": "fish",
     "url": "/ads/ad-2.mp3",
     "targetSeconds": 25
   },
   {
     "index": 3,
     "product": "LedgerMind Finance App",
-    "voice": "Jerry",
-    "engine": "elevenlabs-flash",
+    "voice": "Alex",
+    "engine": "fish",
     "url": "/ads/ad-3.mp3",
     "targetSeconds": 25
   },
   {
     "index": 4,
     "product": "NightShade VPN",
-    "voice": "Marcus",
-    "engine": "elevenlabs-flash",
+    "voice": "Charlie",
+    "engine": "fish",
     "url": "/ads/ad-4.mp3",
     "targetSeconds": 25
   },
   {
     "index": 5,
     "product": "BrightKettle Coffee",
-    "voice": "Jerry",
-    "engine": "elevenlabs-flash",
+    "voice": "Sarah",
+    "engine": "fish",
     "url": "/ads/ad-5.mp3",
     "targetSeconds": 25
   },
   {
     "index": 6,
     "product": "Anvil Fitness",
-    "voice": "Samantha",
-    "engine": "elevenlabs-flash",
+    "voice": "Allie",
+    "engine": "fish",
     "url": "/ads/ad-6.mp3",
     "targetSeconds": 25
   }
