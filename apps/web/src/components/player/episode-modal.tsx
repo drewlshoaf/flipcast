@@ -545,16 +545,14 @@ function TranscriptPanel({
   currentItem: SequenceItem | null;
   currentSpeaker: SpeakerRole | null;
 }) {
+  // All hooks must be called unconditionally before any early return, or
+  // React throws "Rendered more hooks than during the previous render" when
+  // sceneTurns goes from empty to populated.
   const activeRef = useRef<HTMLDivElement | null>(null);
   const currentSceneIndex =
     currentItem && currentItem.kind === "scene"
       ? currentItem.sceneIndex
       : null;
-
-  const sceneKeys = Object.keys(sceneTurns)
-    .map((k) => Number(k))
-    .sort((a, b) => a - b);
-  if (sceneKeys.length === 0) return null;
 
   // Auto-scroll the active turn into view when the speaker changes.
   useEffect(() => {
@@ -565,6 +563,11 @@ function TranscriptPanel({
       });
     }
   }, [currentSpeaker, currentSceneIndex]);
+
+  const sceneKeys = Object.keys(sceneTurns)
+    .map((k) => Number(k))
+    .sort((a, b) => a - b);
+  if (sceneKeys.length === 0) return null;
 
   const characterByRole = new Map(
     (characters ?? []).map((c) => [c.role, c] as const),
