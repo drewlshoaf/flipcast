@@ -214,8 +214,31 @@ export async function runPipeline(requestId: string): Promise<void> {
     const allSceneTurns: { sceneIndex: number; turns: TranscriptTurn[] }[] =
       [];
 
-    for (const item of plan.items) {
-      if (item.kind !== "scene") continue;
+    const sceneItems = plan.items.filter(
+      (it): it is Extract<typeof it, { kind: "scene" }> => it.kind === "scene",
+    );
+
+    // Fill missing outline focuses upfront so a prefetched next scene has
+    // its focus set before we kick off its Claude call.
+    for (const s of sceneItems) {
+      const outlineEntry = setup.outline.find(
+        (o) => o.sceneIndex === s.sceneIndex,
+      );
+      if (outlineEntry && !outlineEntry.focus) {
+        outlineEntry.focus = defaultFocus(
+          s.sceneIndex,
+          plan.totalScenes,
+          s.isFinal,
+        );
+      }
+    }
+
+    // Prefetch one scene ahead: while scene N's TTS/stitch/upload runs,
+    // Claude generates scene N+1. Skipped for newscast (pre-generated).
+    let nextGenPromise: Promise<{ turns: TranscriptTurn[] }> | null = null;
+
+    for (let i = 0; i < sceneItems.length; i++) {
+      const item = sceneItems[i]!;
       const sceneIndex = item.sceneIndex;
 
       await emit("scene_generation_started", requestId, {
@@ -223,32 +246,48 @@ export async function runPipeline(requestId: string): Promise<void> {
         data: { sceneIndex, totalScenes: plan.totalScenes },
       });
 
-      // Give Claude a one-line focus if we don't have one from the outline.
-      const sceneOutline = setup.outline.find(
-        (o) => o.sceneIndex === sceneIndex,
-      );
-      if (sceneOutline && !sceneOutline.focus) {
-        sceneOutline.focus = defaultFocus(sceneIndex, plan.totalScenes, item.isFinal);
-      }
-
       const preGenTurns = preGeneratedScenes?.get(sceneIndex);
-      const { turns } = preGenTurns
-        ? { turns: preGenTurns }
-        : await generateScene({
-            topic: request.topic,
-            setup,
-            sceneIndex,
-            totalScenes: plan.totalScenes,
-            format,
-            vibe,
-            priorScenesBrief:
-              priorScenesBriefs.length > 0
-                ? priorScenesBriefs.join("\n")
-                : undefined,
-          });
+      let turns: TranscriptTurn[];
+      if (preGenTurns) {
+        turns = preGenTurns;
+      } else if (nextGenPromise) {
+        turns = (await nextGenPromise).turns;
+        nextGenPromise = null;
+      } else {
+        const res = await generateScene({
+          topic: request.topic,
+          setup,
+          sceneIndex,
+          totalScenes: plan.totalScenes,
+          format,
+          vibe,
+          priorScenesBrief:
+            priorScenesBriefs.length > 0
+              ? priorScenesBriefs.join("\n")
+              : undefined,
+        });
+        turns = res.turns;
+      }
 
       allSceneTurns.push({ sceneIndex, turns });
       priorScenesBriefs.push(`Scene ${sceneIndex}: ${summarize(turns)}`);
+
+      const nextItem = sceneItems[i + 1];
+      if (nextItem && !preGeneratedScenes) {
+        const briefForNext = priorScenesBriefs.join("\n");
+        const pending = generateScene({
+          topic: request.topic,
+          setup,
+          sceneIndex: nextItem.sceneIndex,
+          totalScenes: plan.totalScenes,
+          format,
+          vibe,
+          priorScenesBrief: briefForNext,
+        });
+        // Prevent unhandled rejection if the main loop throws before we await.
+        pending.catch(() => {});
+        nextGenPromise = pending;
+      }
 
       const characterByRole = new Map(
         characters.map((c) => [c.role, c] as const),
