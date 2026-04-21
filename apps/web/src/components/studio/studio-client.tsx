@@ -383,11 +383,12 @@ export function StudioClient({
       setPlayback({ stage: "finished", index: nextIndex });
       return;
     }
-    const next = plan.items[nextIndex]!;
-    setPlayback({
-      stage: srcForItem(next) ? "playing" : "waiting",
-      index: nextIndex,
-    });
+    // 1-second breather between items so ad→scene cuts don't feel abrupt.
+    // Advancing to "waiting" lets the existing advance effect promote to
+    // "playing" the moment the next src is available (usually immediately).
+    setTimeout(() => {
+      setPlayback({ stage: "waiting", index: nextIndex });
+    }, 1000);
   }
 
   function resetSession() {
