@@ -262,6 +262,13 @@ export function StudioClient({
       );
       return;
     }
+    // Gate first generation behind signup. Preserve the topic across the
+    // round trip so the user lands back in Studio with their work intact.
+    if (!sessionUser) {
+      const next = `/studio?topic=${encodeURIComponent(topic.trim())}`;
+      window.location.href = `/signup?next=${encodeURIComponent(next)}`;
+      return;
+    }
     setSubmitting(true);
     setError(null);
     setEvents([]);

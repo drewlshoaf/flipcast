@@ -72,6 +72,12 @@ export async function POST(req: Request) {
 
   const session = await getSession();
   const userId = session?.user?.id ?? null;
+  if (!userId) {
+    return NextResponse.json(
+      { error: "Sign in to create a Flipcast." },
+      { status: 401 },
+    );
+  }
 
   const [request] = await db
     .insert(flipcastRequests)
