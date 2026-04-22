@@ -6,9 +6,12 @@ import { synthesizeSegment } from "../src/clients/tts";
 const OUT_DIR = "/app/apps/web/public/station";
 
 // Branded station intro — played before the first ad on every flip.audio.
+// Uses Fish S2 Pro inline tags for a warm, professional station-ID delivery.
+// "flip dot audio" is intentional so the synth pronounces the brand cleanly
+// instead of stumbling on the literal period in "flip.audio".
 const INTRO_VOICE_ID = "fa-paula";
 const INTRO_TEXT =
-  "Thanks for choosing flip.audio. We're assembling your flip.audio and will be with you shortly — right after these short ads.";
+  "[excited] Welcome to flip dot audio. [short pause] The podcast that doesn't exist [pause] until you ask for it. [confident] We're spinning up your show right now — [short pause] enjoy a quick word from our sponsors.";
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

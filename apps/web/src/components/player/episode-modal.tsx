@@ -11,6 +11,7 @@ import {
   type TranscriptTurn,
 } from "@flipaudio/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
+import { EndPanel } from "@/components/player/end-panel";
 
 type Stage = "idle" | "playing" | "waiting" | "finished";
 
@@ -18,6 +19,8 @@ interface EpisodeModalProps {
   open: boolean;
   onClose: () => void;
   topic: string;
+  // Cast id for the post-flip rate/share panel.
+  requestId: string | null;
   plan: SequencePlan | null;
   stage: Stage;
   playbackIndex: number;
@@ -95,6 +98,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
     open,
     onClose,
     topic,
+    requestId,
     plan,
     stage,
     playbackIndex,
@@ -148,14 +152,9 @@ export function EpisodeModal(props: EpisodeModalProps) {
     };
   }, [open]);
 
-  // When the flipcast finishes, auto-close after a brief "Done" beat so the
-  // user lands back in the Studio without having to click anything.
-  useEffect(() => {
-    if (!open) return;
-    if (stage !== "finished") return;
-    const t = setTimeout(onClose, 1200);
-    return () => clearTimeout(t);
-  }, [open, stage, onClose]);
+  // When the flipcast finishes the EndPanel takes over with a rate/share
+  // prompt; user closes the modal explicitly. (Previously we auto-closed
+  // after 1.2s, which skipped the chance to capture feedback or share.)
 
   const isWaiting =
     stage === "waiting" || (!!currentItem && !currentSrc) || stage === "idle";
@@ -346,9 +345,20 @@ export function EpisodeModal(props: EpisodeModalProps) {
             />
           )}
 
+          {/* End-of-flip rate + share panel. Replaces the old auto-close
+              and gives users a place to react and share. */}
+          {isFinished && requestId && (
+            <EndPanel
+              requestId={requestId}
+              topic={topic}
+              variant="overlay"
+              onDismiss={onClose}
+            />
+          )}
+
           {/* Always-visible promo box. Auto-fills with the current ad's code
               while an ad is playing. */}
-          <AdPromoCard prefill={currentPromoCode} />
+          {!isFinished && <AdPromoCard prefill={currentPromoCode} />}
         </div>
 
         {/* key={currentSrc} forces autoplay on each new item. onError advances

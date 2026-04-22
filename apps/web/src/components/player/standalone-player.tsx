@@ -8,6 +8,7 @@ import {
   type SequencePlan,
   type SseEvent,
 } from "@flipaudio/types";
+import { EndPanel } from "@/components/player/end-panel";
 
 interface FlipcastRow {
   id: string;
@@ -536,6 +537,16 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
               </ol>
             </div>
           </section>
+
+          {stage === "finished" && (
+            <div className="mt-6">
+              <EndPanel
+                requestId={requestId}
+                topic={row.topic}
+                variant="inline"
+              />
+            </div>
+          )}
 
           {isAdmin && Object.keys(sceneTurns).length > 0 && (
             <section className="mt-6 glass rounded-[32px] p-6 shadow-card">

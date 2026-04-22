@@ -530,7 +530,7 @@ export async function generateFullNewscast(args: {
       const targetWords = Math.round((o.targetSeconds / 60) * 150);
       return `  Scene ${o.sceneIndex} — ${o.targetSeconds}s (~${targetWords} words total). ${
         isFinal
-          ? "FINAL scene: wrap-up with closing thoughts and a sign-off. Do NOT end with a 'we'll be right back' transition."
+          ? "FINAL scene: wrap-up with closing thoughts and a sign-off. Do NOT end with a 'we'll be right back' transition. BEFORE the sign-off, the host MUST ask listeners to LIKE this episode and SHARE it with one person — worked in naturally, in the host's voice. Vary the wording each time (don't copy verbatim across episodes). Examples of the spirit: 'If this landed, hit like and send it to someone who'd disagree', 'Tap the heart if we earned it — and pass it on', 'Like it, share it, you know the move'. Never sound like a corporate read."
           : "Open with 'And we're back.' / 'Welcome back.' then deliver this beat. End with the moderator transitioning to an ad break ('we'll be right back after this short break' / 'stay with us'). NEVER specify how long the break or show is — no 'back in an hour', 'back in thirty minutes', 'see you next week', or any other time reference. The break is a few seconds; do not imply otherwise."
       }`;
     })
@@ -705,6 +705,7 @@ export async function generateScene(args: {
           ? "After the welcome-back opening, the host delivers closing thoughts, a short reflection, and a sign-off (thanks for listening)."
           : "After the welcome-back opening, the moderator delivers closing thoughts, thanks the panelists by name, and a thanks-for-listening sign-off.",
         "Do NOT end with a 'we'll be right back' ad transition — this is the ending.",
+        "BEFORE the final sign-off, the host (moderator for panel) MUST ask listeners to LIKE this episode and SHARE it with someone — work it in naturally, in their own voice. Vary the wording every time. Examples of the spirit (don't copy verbatim): 'If this hit, hit the heart and pass it to one person who'd argue with us', 'Smash like, send it to your group chat', 'If you laughed even once, that's a like and a share — you know the move', 'Tap the heart if we earned it, share it with someone who needs the take'. Match the cast's vibe, never sound like a corporate read.",
       ].join(" ")
     : [
         `This is scene ${args.sceneIndex} of ${args.totalScenes} — about ${targetSeconds} seconds.`,

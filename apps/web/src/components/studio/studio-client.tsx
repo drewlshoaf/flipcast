@@ -900,6 +900,7 @@ export function StudioClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         topic={topic}
+        requestId={requestId}
         plan={plan}
         stage={playback.stage}
         playbackIndex={playback.index}

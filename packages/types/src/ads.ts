@@ -36,7 +36,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "SLEEP",
     accent: "indigo",
-    imageUrl: null,
+    imageUrl: "/ads/images/SLEEP.png",
     text:
       "<|speaker:0|>[exhale] Okay, [short pause] I'm done. Pillow wars, thermostat fights, three-a-m tossing — it's killing me.\n" +
       "<|speaker:1|>[chuckle] Same. Until I switched to a Napkin mattress. Cooling foam, pressure-mapped support, [emphasis] three hundred and sixty-five nights to return it.\n" +
@@ -53,7 +53,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "FARM",
     accent: "emerald",
-    imageUrl: null,
+    imageUrl: "/ads/images/FARM.png",
     text:
       "[sigh] Last Tuesday I ate dry cereal [pause] standing over the kitchen sink. Not my finest hour. [short pause] FarmBox meal kits fixed it. [emphasis] Farm-fresh ingredients, twenty-minute recipes, and no more weeknight panic at six-thirty. They even pre-measure the spices — which is, honestly, [chuckle] emotional support. Go to flip dot audio, promo code FARM. Your first four meals are on the house.",
   },
@@ -64,7 +64,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "LEDGER",
     accent: "amber",
-    imageUrl: null,
+    imageUrl: "/ads/images/LEDGER.png",
     text:
       "[confident] Seventy percent of us have no idea where last month's money actually went. [pause] Terrifying, right? [short pause] LedgerMind is the finance app that fixes it. Automatic categorization, [emphasis] scary-accurate forecasts, and zero shame notifications at two a-m. [chuckle] You finally see what's going on without hating yourself. Flip dot audio, promo code LEDGER. Three months free.",
   },
@@ -75,7 +75,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "SHADE",
     accent: "violet",
-    imageUrl: null,
+    imageUrl: "/ads/images/SHADE.png",
     text:
       "<|speaker:0|>[curious] Quick question. When did you last actually read a privacy policy?\n" +
       "<|speaker:1|>[laughing] Never. Why would I?\n" +
@@ -91,7 +91,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "BREW",
     accent: "orange",
-    imageUrl: null,
+    imageUrl: "/ads/images/BREW.png",
     text:
       "[emphasis] I can spot a bad cup of coffee from across the room. [pause] Stale, burned — [sigh] just sad. [short pause] BrightKettle fixes it. Small-batch beans, roasted the morning they ship, on your doorstep within forty-eight hours of roast. [delight] Tastes like someone who actually cares about coffee made it. Flip dot audio, promo code BREW. Fifteen dollars off your first bag.",
   },
@@ -102,7 +102,7 @@ export const AD_POOL: AdMeta[] = [
     targetSeconds: 25,
     promoCode: "LIFT",
     accent: "slate",
-    imageUrl: null,
+    imageUrl: "/ads/images/LIFT.png",
     text:
       "[chuckle] Gym confession — [short pause] I avoided strength training for years. Every app felt like a spreadsheet. [pause] Then Anvil Fitness fixed it. [emphasis] Ten-minute routines, coach-designed, built around your actual schedule — not some fantasy version of your life. You just show up. [confident] Flip dot audio, promo code LIFT. Your first month is free.",
   },

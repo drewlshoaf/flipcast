@@ -2,44 +2,11 @@ import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
 import { SurpriseMe } from "@/components/home/surprise-me";
-
-// More sample prompts shown below the hero. Distinct from the BUBBLES cloud
-// so the page doesn't feel like the same list twice. Tagged with an accent
-// to keep the colorway consistent with the rest of the brand.
-const MORE_PROMPTS: { text: string; accent: "sky" | "pink" | "mint" | "violet" | "amber" }[] = [
-  { text: "the truth about gut-health hype", accent: "mint" },
-  { text: "why is everyone leaving X for Bluesky?", accent: "sky" },
-  { text: "is print magazines having a moment?", accent: "amber" },
-  { text: "the new etiquette of voice notes", accent: "pink" },
-  { text: "why standup is bigger than ever", accent: "violet" },
-  { text: "what happened to indie movie theaters?", accent: "amber" },
-  { text: "the strange economy of livestream poker", accent: "sky" },
-  { text: "are gen-z really drinking less?", accent: "pink" },
-  { text: "the secret history of the Costco hot dog", accent: "amber" },
-  { text: "is fitness culture eating wellness alive?", accent: "mint" },
-  { text: "why nobody can agree on what 'AI' means", accent: "violet" },
-  { text: "the comeback of in-person book clubs", accent: "pink" },
-  { text: "what's actually happening with the housing market", accent: "sky" },
-  { text: "why Formula 1 finally cracked America", accent: "violet" },
-  { text: "the case for boring vacations", accent: "mint" },
-  { text: "is everyone secretly burned out on AI?", accent: "amber" },
-];
-
-const ACCENT_TILE: Record<string, string> = {
-  sky: "bg-sky-50 ring-sky-100 hover:ring-sky-200",
-  pink: "bg-pink-50 ring-pink-100 hover:ring-pink-200",
-  mint: "bg-emerald-50 ring-emerald-100 hover:ring-emerald-200",
-  violet: "bg-violet-50 ring-violet-100 hover:ring-violet-200",
-  amber: "bg-amber-50 ring-amber-100 hover:ring-amber-200",
-};
-
-const ACCENT_DOT: Record<string, string> = {
-  sky: "bg-sky-400",
-  pink: "bg-pink-400",
-  mint: "bg-emerald-400",
-  violet: "bg-violet-400",
-  amber: "bg-amber-400",
-};
+import {
+  SAMPLE_PROMPTS,
+  PROMPT_TILE_CLASS,
+  PROMPT_DOT_CLASS,
+} from "@/lib/sample-prompts";
 
 function studioHref(topic?: string): string {
   if (!topic) return "/studio";
@@ -78,7 +45,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
       </header>
 
       {/* Hero with bubble field */}
-      <section className="relative mx-auto mb-16 min-h-[640px] overflow-visible">
+      <section className="relative mx-auto mb-4 min-h-[520px] overflow-visible">
         {/* Bubble field — hidden on small screens to keep things calm */}
         <div className="pointer-events-none absolute inset-0 hidden md:block">
           {BUBBLES.map((b) => (
@@ -101,7 +68,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
 
         {/* Central read zone */}
-        <div className="relative z-10 mx-auto flex max-w-[640px] flex-col items-center px-4 pt-6 text-center md:pt-20">
+        <div className="relative z-10 mx-auto flex max-w-[640px] flex-col items-center px-4 pt-2 text-center md:pt-10">
           {/* Big pink play button */}
           <Link
             href={studioHref()}
@@ -177,14 +144,14 @@ export function HomePage({ sessionUser }: HomePageProps) {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {MORE_PROMPTS.map((p) => (
+          {SAMPLE_PROMPTS.map((p) => (
             <Link
               key={p.text}
               href={studioHref(p.text)}
-              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-sm font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card ${ACCENT_TILE[p.accent]}`}
+              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-sm font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card ${PROMPT_TILE_CLASS[p.accent]}`}
             >
               <span
-                className={`inline-block h-2 w-2 shrink-0 rounded-full ${ACCENT_DOT[p.accent]}`}
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${PROMPT_DOT_CLASS[p.accent]}`}
                 aria-hidden
               />
               <span className="leading-snug">{p.text}</span>
