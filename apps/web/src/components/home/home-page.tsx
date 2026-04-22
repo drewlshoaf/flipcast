@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
+import { AdPromoCard } from "@/components/home/ad-promo-card";
 import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
 import { SurpriseMe } from "@/components/home/surprise-me";
 import {
@@ -74,6 +75,12 @@ export function HomePage({ sessionUser }: HomePageProps) {
 
         {/* Soft white glow behind the central read zone */}
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
+
+        {/* Ad promo code tile, top-right of the hero. Sits above the bubble
+            field via z-index. Hidden on small screens to keep mobile clean. */}
+        <div className="pointer-events-auto absolute right-0 top-0 z-20 hidden w-[380px] md:block">
+          <AdPromoCard />
+        </div>
 
         {/* Central read zone */}
         <div className="relative z-10 mx-auto flex max-w-[640px] flex-col items-center px-4 pt-2 text-center md:pt-10">
