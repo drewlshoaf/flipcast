@@ -30,18 +30,24 @@ export const BUBBLES: Bubble[] = [
   { text: "are dating apps quietly dying?", x: 7, y: 70, size: "md", accent: "pink" },
   { text: "containerized everything", x: 3, y: 86, size: "sm", accent: "sky", tilt: 2 },
 
-  // Upper-mid (above the read zone)
+  // Upper-mid (above the read zone — keep this band clear of the promo tile
+  // in the top-right corner of the hero)
   { text: "should cities ban cars downtown?", x: 24, y: 4, size: "md", accent: "mint" },
+  { text: "specialty coffee, decoded", x: 34, y: 6, size: "sm", accent: "amber" },
   { text: "the great group-chat backlash", x: 44, y: 2, size: "sm", accent: "pink", tilt: 1 },
+  { text: "newsletters, honestly", x: 52, y: 10, size: "sm", accent: "pink", tilt: -2 },
   { text: "is AI actually changing radio?", x: 62, y: 5, size: "md", accent: "sky", tilt: -1 },
-  { text: "specialty coffee, decoded", x: 80, y: 3, size: "sm", accent: "amber" },
+  { text: "satellite politics", x: 58, y: 16, size: "sm", accent: "amber", tilt: 2 },
 
-  // Right side
-  { text: "what's the deal with 'quiet luxury'?", x: 86, y: 16, size: "md", accent: "violet", tilt: 3 },
-  { text: "are headphones the new cigarettes?", x: 90, y: 32, size: "md", accent: "pink" },
-  { text: "the truth about cottage-core finance", x: 78, y: 48, size: "lg", accent: "mint", tilt: -2 },
+  // Right side — BELOW the promo tile (which occupies roughly x ≥ 74, y ≤ 55)
   { text: "why everyone soft-launches now", x: 91, y: 64, size: "md", accent: "sky" },
   { text: "the unironic comeback of the landline", x: 86, y: 80, size: "md", accent: "amber", tilt: 2 },
+
+  // Former right-side prompts relocated out of the promo-tile zone
+  { text: "what's the deal with 'quiet luxury'?", x: 54, y: 80, size: "md", accent: "violet", tilt: 3 },
+  { text: "are headphones the new cigarettes?", x: 38, y: 82, size: "md", accent: "pink" },
+  { text: "the truth about cottage-core finance", x: 22, y: 56, size: "lg", accent: "mint", tilt: -2 },
+  { text: "the print magazine comeback", x: 64, y: 76, size: "sm", accent: "amber", tilt: -2 },
 
   // Lower-mid (below the read zone)
   { text: "why is everyone running ultras?", x: 22, y: 86, size: "md", accent: "pink", tilt: -1 },
@@ -53,18 +59,13 @@ export const BUBBLES: Bubble[] = [
   // Ambient smaller chips scattered for density
   { text: "podcast vs. talk radio", x: 14, y: 14, size: "sm", accent: "sky", tilt: -3 },
   { text: "AI hiring freezes, explained", x: 16, y: 76, size: "sm", accent: "violet" },
-  { text: "satellite politics", x: 76, y: 14, size: "sm", accent: "amber", tilt: 2 },
   { text: "indie journalism's quiet consolidation", x: 78, y: 76, size: "sm", accent: "sky" },
   { text: "why streaming peaked", x: 12, y: 30, size: "sm", accent: "mint", tilt: 2 },
-  // Filling the gap right of "why streaming peaked":
   { text: "are gen-z drinking less?", x: 24, y: 38, size: "sm", accent: "pink", tilt: -1 },
   { text: "the quiet death of cable", x: 24, y: 20, size: "sm", accent: "violet", tilt: 2 },
-  { text: "newsletters, honestly", x: 88, y: 24, size: "sm", accent: "pink", tilt: -2 },
-  // Filling the gap left of "newsletters, honestly":
-  { text: "why Formula 1 finally cracked America", x: 66, y: 22, size: "md", accent: "sky" },
-  { text: "the print magazine comeback", x: 74, y: 36, size: "sm", accent: "amber", tilt: -2 },
+  { text: "why Formula 1 finally cracked America", x: 66, y: 28, size: "md", accent: "sky" },
   { text: "remote work: winning or losing?", x: 12, y: 62, size: "sm", accent: "amber" },
-  { text: "the Slack etiquette wars", x: 88, y: 56, size: "sm", accent: "violet", tilt: 1 },
+  { text: "the Slack etiquette wars", x: 70, y: 62, size: "sm", accent: "violet", tilt: 1 },
 ];
 
 const ACCENT_CLASSES: Record<BubbleAccent, string> = {
