@@ -56,7 +56,13 @@ export const BUBBLES: Bubble[] = [
   { text: "satellite politics", x: 76, y: 14, size: "sm", accent: "amber", tilt: 2 },
   { text: "indie journalism's quiet consolidation", x: 78, y: 76, size: "sm", accent: "sky" },
   { text: "why streaming peaked", x: 12, y: 30, size: "sm", accent: "mint", tilt: 2 },
+  // Filling the gap right of "why streaming peaked":
+  { text: "are gen-z drinking less?", x: 24, y: 32, size: "sm", accent: "pink", tilt: -1 },
+  { text: "the quiet death of cable", x: 30, y: 26, size: "sm", accent: "violet", tilt: 2 },
   { text: "newsletters, honestly", x: 88, y: 24, size: "sm", accent: "pink", tilt: -2 },
+  // Filling the gap left of "newsletters, honestly":
+  { text: "why Formula 1 finally cracked America", x: 66, y: 22, size: "md", accent: "sky" },
+  { text: "the print magazine comeback", x: 74, y: 30, size: "sm", accent: "amber", tilt: -2 },
   { text: "remote work: winning or losing?", x: 12, y: 62, size: "sm", accent: "amber" },
   { text: "the Slack etiquette wars", x: 88, y: 56, size: "sm", accent: "violet", tilt: 1 },
 ];
