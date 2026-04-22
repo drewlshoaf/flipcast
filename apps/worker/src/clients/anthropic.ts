@@ -367,6 +367,8 @@ function formatBlurb(format: FlipcastFormat): string {
   switch (format) {
     case "panel":
       return "a three-person panel discussion — one moderator and two distinct panelists who interact with each other";
+    case "pals":
+      return "a two-host show — two co-equal hosts with chemistry, riffing as friends rather than interviewer/guest";
     case "newscast":
       return "a newscast — one authoritative anchor delivering a crisp, informative report, no panel interaction";
   }
@@ -394,15 +396,27 @@ export async function generateSetup(args: {
     return { ...stubSetup(args, pool), model: SETUP_MODEL, usage: ZERO_USAGE };
   }
 
-  // Single-speaker formats use the solo tool.
+  // Single-speaker formats use the solo tool. Multi-speaker formats (pals=2,
+  // panel=3) share the panel tool — its panelists array accepts 1–3.
   const useSolo = cfg.castSize === 1;
+  const isPals = cfg.castSize === 2;
   const toolDef = useSolo ? SOLO_SETUP_TOOL : PANEL_SETUP_TOOL;
-  const roles = useSolo ? ["moderator"] : ["moderator", "panelist_1", "panelist_2"];
+  const roles = useSolo
+    ? ["moderator"]
+    : isPals
+      ? ["moderator", "panelist_1"]
+      : ["moderator", "panelist_1", "panelist_2"];
 
   let castInstructions: string;
   if (useSolo) {
     castInstructions =
       "Invent ONE news anchor — credible, authoritative, with a clear voice. Give them a plausible name, ethnicity, and short on-air bio.";
+  } else if (isPals) {
+    castInstructions = [
+      "Invent TWO co-host characters with established chemistry — a duo who riff as equals (think a podcast pair, not interviewer/guest). They should have distinct backgrounds, temperaments, and rhythms but feel like longtime friends.",
+      "Vary names and origins widely across runs. Traditional American names (Michael Davidson, Sarah Carter, David Thompson, Jennifer Walsh, Ryan Sullivan, Emily Roberts, etc.) are great and often the best fit — don't default to the same distinctive non-American names every time. AVOID repeat offenders like 'Dmitri Volkov', 'Amara Okafor', 'Priya Patel', and 'Maya Desai'. Pull from a fresh, wide pool each run.",
+      "Use the role 'moderator' for the lead host (the one who opens the welcome) and 'panelist_1' for the co-host. Do NOT include a panelist_2.",
+    ].join(" ");
   } else {
     castInstructions = [
       "Invent three vivid, dramatic characters: one moderator and two panelists, sharply distinct in background, temperament, and cadence.",
@@ -430,6 +444,8 @@ export async function generateSetup(args: {
     "For each character, emit name, gender, a one- or two-word ethnic/accent descriptor, bio (~7-10 words, spoken out loud in the intro), and a 4-6 sentence theatrical persona.",
     useSolo
       ? "The welcome is the host's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing flip.audio...\"). Do NOT re-greet with \"welcome to flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" or \"Alright —\" — then frame the topic with real context: 3-4 sentences covering what it is, why it matters right now, and what the listener will get from this report. End with this EXACT line as the final sentence: \"We'll be right with you after this ad.\" First-person host voice, ~75 words total."
+      : isPals
+      ? "The welcome is spoken by the LEAD host (the moderator role) only — single voice, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing flip.audio...\"). Do NOT re-greet with \"welcome to flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name] — and you'll hear my partner-in-crime [co-host name] in just a sec\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease the co-host (panelist_1) by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're cracking it open right after this ad.\" First-person lead-host voice, ~75 words total."
       : "The welcome is the moderator's first on-air moment, AFTER a branded station intro has already greeted the listener (\"Thanks for choosing flip.audio...\"). Do NOT re-greet with \"welcome to flip.audio.\" Jump straight in — e.g. \"Hi, I'm [name]\" — then (a) frame the topic with real context: 2-3 sentences on what it is, why it matters, and what makes it compelling right now, and (b) briefly tease each panelist by name with a one-line hint at the angle they'll bring. End the welcome with this EXACT line as the final sentence (verbatim, no paraphrasing): \"We're gathering the panelists and we'll start shortly, right after this ad.\" First-person moderator voice, ~75 words total.",
     voiceInstructions,
     "",
@@ -651,6 +667,7 @@ export async function generateScene(args: {
   const approxWords = Math.round((targetSeconds / 60) * 150);
   const cfg = formatConfig(args.format);
   const useSolo = cfg.castSize === 1;
+  const isPals = cfg.castSize === 2;
 
   if (!env.anthropicApiKey) {
     return {
@@ -673,6 +690,23 @@ export async function generateScene(args: {
 
   const formatGuidance = useSolo
     ? "This is a newscast: a single anchor delivering the material in first person. All turns use speaker 'moderator'. Write in crisp, structured news-report cadence."
+    : isPals
+    ? [
+        "This is a TWO-host conversation between equals — a duo with chemistry, not interviewer/guest. Speakers alternate between 'moderator' (the lead host) and 'panelist_1' (the co-host). Never use 'panelist_2'.",
+        "",
+        "Conversation dynamics:",
+        "  • Keep most turns short — one or two sentences. Many turns should be even shorter: a fragment, a one-line reaction, a single word ('Right.' / 'Wait —' / 'Exactly.' / 'Oh come on.').",
+        "  • The two hosts riff together — they finish each other's thoughts, push back, react audibly, and disagree without it ever feeling combative. They're friends.",
+        "  • Neither host is a moderator-of-the-other. The lead host steers gently but the co-host can also shift the topic, lob a question back, or call a beat.",
+        "  • Tight back-and-forth: in a 30-second chunk you should see 6–10 short turns, not 2–3 long speeches.",
+        "  • Use `[chuckle]` / `[laughing]` / `[surprised]` / `[emphasis]` for quick reactions. `[interrupting]` when one cuts the other off. Let lines trail off with em-dashes when interrupted.",
+        "  • Each host's voice must be unmistakable — distinct word choice, rhythm, hooks, signature reactions.",
+        "",
+        "Pacing (pauseMsAfter — translated to inline silence in the audio):",
+        "  • Tight cross-talk / interruption: 80–180 ms.",
+        "  • Natural beat / shift of topic: 300–500 ms.",
+        "  • Dramatic / thoughtful pause: 800–1500 ms. Use sparingly.",
+      ].join("\n")
     : [
         "This is a three-person panel — a FAST, LIVELY conversation, not three monologues in sequence.",
         "",
@@ -692,6 +726,12 @@ export async function generateScene(args: {
 
   const openingGuidance = useSolo
     ? "Open the scene with the host welcoming listeners back from the ad break — e.g. \"And we're back.\" or \"Welcome back.\" — then dive into this scene's beat."
+    : isPals
+    ? [
+        "OPEN the scene with the lead host (moderator) welcoming listeners back from the ad break — e.g. \"And we're back.\" — then immediately bounce a thought to the co-host (panelist_1) BY NAME, or invite their reaction to something. The co-host should answer back quickly so the back-and-forth is established within the first three turns.",
+        "Example opening: \"Alright, we're back. [Co-host name], I cannot stop thinking about what you said before the break.\"",
+        "Alternate which host opens vs. which one drives the topic across scenes so it doesn't feel like an interview.",
+      ].join(" ")
     : [
         "OPEN the scene with the moderator welcoming listeners back from the ad break — e.g. \"And we're back.\" or \"Welcome back.\" — then hand off to one of the panelists BY NAME with a specific, pointed prompt or question that launches this scene's beat.",
         "Example opening turn: \"Welcome back. [Panelist Name], you said something before the break that I want to push on — [pointed question].\"",
@@ -703,9 +743,11 @@ export async function generateScene(args: {
         `This is the FINAL scene — about ${targetSeconds} seconds of wrap-up.`,
         useSolo
           ? "After the welcome-back opening, the host delivers closing thoughts, a short reflection, and a sign-off (thanks for listening)."
+          : isPals
+          ? "After the welcome-back opening, both hosts trade closing thoughts — let the co-host (panelist_1) get a real beat, not just a goodbye. The lead host (moderator) delivers the actual sign-off (thanks for listening), but the co-host can chime in with a final line."
           : "After the welcome-back opening, the moderator delivers closing thoughts, thanks the panelists by name, and a thanks-for-listening sign-off.",
         "Do NOT end with a 'we'll be right back' ad transition — this is the ending.",
-        "BEFORE the final sign-off, the host (moderator for panel) MUST ask listeners to LIKE this episode and SHARE it with someone — work it in naturally, in their own voice. Vary the wording every time. Examples of the spirit (don't copy verbatim): 'If this hit, hit the heart and pass it to one person who'd argue with us', 'Smash like, send it to your group chat', 'If you laughed even once, that's a like and a share — you know the move', 'Tap the heart if we earned it, share it with someone who needs the take'. Match the cast's vibe, never sound like a corporate read.",
+        "BEFORE the final sign-off, the host (moderator role) MUST ask listeners to LIKE this episode and SHARE it with someone — work it in naturally, in their own voice. Vary the wording every time. Examples of the spirit (don't copy verbatim): 'If this hit, hit the heart and pass it to one person who'd argue with us', 'Smash like, send it to your group chat', 'If you laughed even once, that's a like and a share — you know the move', 'Tap the heart if we earned it, share it with someone who needs the take'. Match the cast's vibe, never sound like a corporate read.",
       ].join(" ")
     : [
         `This is scene ${args.sceneIndex} of ${args.totalScenes} — about ${targetSeconds} seconds.`,

@@ -4,13 +4,17 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   AVAILABLE_VIBES,
+  LANGUAGES,
   UI_FORMATS,
+  VOICES,
   formatConfig,
   lengthPreset,
   type FlipcastFormat,
   type FlipcastVibe,
   type SequenceItem,
   type SequencePlan,
+  type VoiceLanguage,
+  type VoiceOption,
 } from "@flipaudio/types";
 import type {
   Character,
@@ -108,6 +112,8 @@ export function StudioClient({
   const [topic, setTopic] = useState(initialTopic);
   const [format, setFormat] = useState<FlipcastFormat>(initialFormat ?? "panel");
   const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "curious");
+  const [language, setLanguage] = useState<VoiceLanguage>("en");
+  const [pickedVoices, setPickedVoices] = useState<string[]>([]);
   const autoStartFiredRef = useRef(false);
 
   // Engine is admin-controlled via FLIPAUDIO_DEFAULT_ENGINE; only override if
@@ -117,6 +123,21 @@ export function StudioClient({
 
   const lengthMinutes = lengthPreset("long").minutes;
   const cfg = formatConfig(format);
+
+  // Voices the user can pick for the current engine + language. Ad-only
+  // voices are excluded; format castSize drives how many they need to pick.
+  const availableVoices: VoiceOption[] = VOICES.filter(
+    (v) =>
+      !v.adOnly &&
+      v.provider === voiceEngine &&
+      v.language === language,
+  );
+
+  // Reset picks any time the format or language changes — the previous picks
+  // may not even exist in the new pool.
+  useEffect(() => {
+    setPickedVoices([]);
+  }, [format, language]);
 
   // Session / generation state
   const [submitting, setSubmitting] = useState(false);
@@ -239,6 +260,12 @@ export function StudioClient({
       setError("Give us a topic with at least a few words.");
       return;
     }
+    if (pickedVoices.length !== cfg.castSize) {
+      setError(
+        `Pick ${cfg.castSize} voice${cfg.castSize > 1 ? "s" : ""} for the ${cfg.label} format.`,
+      );
+      return;
+    }
     // Gate first generation behind signup. Preserve topic/format/vibe/engine
     // so the user lands back in Studio with their work intact, and set
     // auto=1 so the next page load fires Generate automatically.
@@ -287,6 +314,7 @@ export function StudioClient({
           vibe,
           lengthMinutes,
           engine: voiceEngine,
+          voiceIds: pickedVoices,
         }),
       });
       const data = await res.json();
@@ -569,6 +597,85 @@ export function StudioClient({
             </div>
           </section>
 
+          {/* Voices + language. User picks `castSize` voices in the chosen
+              language; format determines how many (Anchor 1, Pals 2, Panel 3). */}
+          <section>
+            <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight text-ink-900">
+                  Voices
+                </h3>
+                <p className="text-sm text-ink-500">
+                  Pick {cfg.castSize} voice{cfg.castSize > 1 ? "s" : ""} for
+                  this {cfg.label} cast.
+                </p>
+              </div>
+              <span
+                className={`chip ${
+                  pickedVoices.length === cfg.castSize
+                    ? "chip-mint"
+                    : "chip-slate"
+                }`}
+              >
+                {pickedVoices.length} / {cfg.castSize} picked
+              </span>
+            </div>
+
+            {/* Language tabs */}
+            <div className="mb-3 flex flex-wrap gap-2">
+              {LANGUAGES.map((lang) => {
+                const active = language === lang.id;
+                return (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => setLanguage(lang.id)}
+                    className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-medium transition ${
+                      active
+                        ? "bg-brand-gradient text-white shadow-card"
+                        : "bg-white/85 text-ink-700 ring-1 ring-slate-200 hover:bg-white"
+                    }`}
+                  >
+                    <span aria-hidden>{lang.emoji}</span>
+                    {lang.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Voice cards */}
+            {availableVoices.length === 0 ? (
+              <div className="rounded-3xl bg-white/60 p-6 text-sm text-ink-500 ring-1 ring-slate-200/70">
+                {language === "es"
+                  ? "Spanish voices are coming soon. Pick English for now."
+                  : "No voices available for this language yet."}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {availableVoices.map((v) => {
+                  const selected = pickedVoices.includes(v.id);
+                  const atCap =
+                    !selected && pickedVoices.length >= cfg.castSize;
+                  return (
+                    <VoicePickCard
+                      key={v.id}
+                      voice={v}
+                      selected={selected}
+                      disabled={atCap}
+                      onToggle={() => {
+                        setPickedVoices((prev) =>
+                          prev.includes(v.id)
+                            ? prev.filter((x) => x !== v.id)
+                            : [...prev, v.id],
+                        );
+                      }}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
           {/* Vibe */}
           <section>
             <div className="mb-3">
@@ -620,7 +727,11 @@ export function StudioClient({
             type="button"
             onClick={submit}
             disabled={
-              submitting || !topic || topic.trim().length < 3 || hasStarted
+              submitting ||
+              !topic ||
+              topic.trim().length < 3 ||
+              pickedVoices.length !== cfg.castSize ||
+              hasStarted
             }
             className="w-full rounded-full bg-brand-gradient px-6 py-4 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -948,6 +1059,86 @@ function Diag({
         {label}
       </div>
       <div className="truncate">{value}</div>
+    </div>
+  );
+}
+
+
+function VoicePickCard({
+  voice,
+  selected,
+  disabled,
+  onToggle,
+}: {
+  voice: VoiceOption;
+  selected: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+
+  function togglePreview(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      a.currentTime = 0;
+      setPlaying(false);
+    } else {
+      a.play().then(
+        () => setPlaying(true),
+        () => setPlaying(false),
+      );
+    }
+  }
+
+  return (
+    <div
+      onClick={() => !disabled && onToggle()}
+      role="button"
+      aria-pressed={selected}
+      className={`cursor-pointer rounded-2xl bg-white/85 p-3 ring-1 transition ${
+        selected
+          ? "ring-2 ring-sky-400 shadow-cardHover"
+          : "ring-slate-200 hover:ring-sky-200 hover:shadow-card"
+      } ${disabled ? "cursor-not-allowed opacity-40" : ""}`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-ink-900">
+            {voice.label}
+          </div>
+          <div className="truncate text-[11px] capitalize text-ink-400">
+            {voice.gender} · {voice.origin}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={togglePreview}
+          aria-label={playing ? "Stop preview" : "Play preview"}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-gradient text-white shadow-card transition active:scale-95"
+        >
+          {playing ? (
+            <svg width="10" height="10" viewBox="0 0 24 24">
+              <rect x="6" y="5" width="4" height="14" rx="1" fill="white" />
+              <rect x="14" y="5" width="4" height="14" rx="1" fill="white" />
+            </svg>
+          ) : (
+            <svg width="10" height="10" viewBox="0 0 24 24">
+              <path d="M7 5v14l12-7-12-7z" fill="white" />
+            </svg>
+          )}
+        </button>
+      </div>
+      <audio
+        ref={audioRef}
+        src={`/voice-samples/${voice.id}.mp3`}
+        preload="none"
+        onEnded={() => setPlaying(false)}
+      />
     </div>
   );
 }

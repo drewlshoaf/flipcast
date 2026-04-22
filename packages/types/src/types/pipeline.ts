@@ -66,7 +66,7 @@ const vibeEnum = z.custom<(typeof VIBE_IDS)[number]>(
 
 export const createRequestSchema = z.object({
   topic: z.string().trim().min(3).max(500),
-  format: z.enum(["panel", "newscast"]),
+  format: z.enum(["newscast", "pals", "panel"]),
   vibe: vibeEnum,
   lengthMinutes: z.number().min(MIN_LENGTH_MINUTES).max(MAX_LENGTH_MINUTES),
   voiceIds: z.array(z.string().min(1)).optional(),

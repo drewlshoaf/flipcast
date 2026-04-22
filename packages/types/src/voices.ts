@@ -15,7 +15,10 @@ export type VoiceOrigin =
   | "british"
   | "german"
   | "french"
+  | "spanish"
   | "generic";
+
+export type VoiceLanguage = "en" | "es";
 
 export interface VoiceOption {
   id: string;
@@ -24,33 +27,47 @@ export interface VoiceOption {
   engines: TtsEngine[];
   provider: TtsProvider;
   origin: VoiceOrigin;
+  language: VoiceLanguage;
   providerVoiceId?: string;
   /** Ad-read voices are excluded from the user-facing scene voice picker. */
   adOnly?: boolean;
 }
 
+export const LANGUAGES: { id: VoiceLanguage; label: string; emoji: string }[] = [
+  { id: "en", label: "English", emoji: "🇺🇸" },
+  { id: "es", label: "Español", emoji: "🇪🇸" },
+];
+
 export const VOICES: VoiceOption[] = [
   // --- AWS Polly (kept for legacy Polly ad scripts, not user-exposed) ---
-  { id: "Joanna", label: "Joanna", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Matthew", label: "Matthew", gender: "male", engines: ["neural", "generative"], provider: "polly", origin: "american" },
-  { id: "Ruth", label: "Ruth", gender: "female", engines: ["neural", "long-form", "generative"], provider: "polly", origin: "american" },
-  { id: "Stephen", label: "Stephen", gender: "male", engines: ["neural", "long-form", "generative"], provider: "polly", origin: "american" },
-  { id: "Kendra", label: "Kendra", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Kimberly", label: "Kimberly", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Salli", label: "Salli", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Joey", label: "Joey", gender: "male", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Ivy", label: "Ivy", gender: "female", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Justin", label: "Justin", gender: "male", engines: ["neural"], provider: "polly", origin: "american" },
-  { id: "Danielle", label: "Danielle", gender: "female", engines: ["long-form", "generative"], provider: "polly", origin: "american" },
-  { id: "Gregory", label: "Gregory", gender: "male", engines: ["long-form", "generative"], provider: "polly", origin: "american" },
+  { id: "Joanna", label: "Joanna", gender: "female", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Matthew", label: "Matthew", gender: "male", engines: ["neural", "generative"], provider: "polly", origin: "american", language: "en" },
+  { id: "Ruth", label: "Ruth", gender: "female", engines: ["neural", "long-form", "generative"], provider: "polly", origin: "american", language: "en" },
+  { id: "Stephen", label: "Stephen", gender: "male", engines: ["neural", "long-form", "generative"], provider: "polly", origin: "american", language: "en" },
+  { id: "Kendra", label: "Kendra", gender: "female", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Kimberly", label: "Kimberly", gender: "female", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Salli", label: "Salli", gender: "female", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Joey", label: "Joey", gender: "male", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Ivy", label: "Ivy", gender: "female", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Justin", label: "Justin", gender: "male", engines: ["neural"], provider: "polly", origin: "american", language: "en" },
+  { id: "Danielle", label: "Danielle", gender: "female", engines: ["long-form", "generative"], provider: "polly", origin: "american", language: "en" },
+  { id: "Gregory", label: "Gregory", gender: "male", engines: ["long-form", "generative"], provider: "polly", origin: "american", language: "en" },
 
   // --- Fish Audio scene voices (s2-pro model). reference_id is the Fish voice id. ---
-  { id: "fa-paula", label: "Paula", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c2623f0c075b4492ac367989aee1576f" },
-  { id: "fa-sarah", label: "Sarah", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "933563129e564b19a115bedd57b7406a" },
-  { id: "fa-allie", label: "Allie", gender: "female", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "59e9dc1cb20c452584788a2690c80970" },
-  { id: "fa-jim", label: "Jim", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "d8a1340984ee4b63ad1ffae27a6a4339" },
-  { id: "fa-charlie", label: "Charlie", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "fb7ec16ca51a45a5a4db881244d7990a" },
-  { id: "fa-alex", label: "Alex", gender: "male", engines: ["fish"], provider: "fish", origin: "american", providerVoiceId: "c85fb11f91f84312a4bd16756f298ae2" },
+  { id: "fa-paula", label: "Paula", gender: "female", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "c2623f0c075b4492ac367989aee1576f" },
+  { id: "fa-sarah", label: "Sarah", gender: "female", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "933563129e564b19a115bedd57b7406a" },
+  { id: "fa-allie", label: "Allie", gender: "female", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "59e9dc1cb20c452584788a2690c80970" },
+  { id: "fa-jim", label: "Jim", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "d8a1340984ee4b63ad1ffae27a6a4339" },
+  { id: "fa-charlie", label: "Charlie", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "fb7ec16ca51a45a5a4db881244d7990a" },
+  { id: "fa-alex", label: "Alex", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "c85fb11f91f84312a4bd16756f298ae2" },
+
+  // --- Fish Audio Spanish voices (s2-pro). ---
+  { id: "fa-juan", label: "Juan", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "3f45a7fd7a614655a61eb7027b955783" },
+  { id: "fa-valentino", label: "Valentino", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "8d2c17a9b26d4d83888ea67a1ee565b2" },
+  { id: "fa-jesus", label: "Jesus", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "f53102becdf94a51af6d64010bc658f2" },
+  { id: "fa-maria", label: "Maria", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "33249d5cc43047d8a491cb5ab2cdabd8" },
+  { id: "fa-isabel", label: "Isabel", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "3f4269ada36440ab821b6729e7083310" },
+  { id: "fa-alejandra", label: "Alejandra", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "5e816f5a0658460b960881a24733c418" },
 ];
 
 export const FISH_VOICES: VoiceOption[] = VOICES.filter(
@@ -72,17 +89,24 @@ export function resolveProviderVoiceId(voice: VoiceOption): string {
 
 export const AVAILABLE_FORMATS = [
   {
-    id: "panel",
-    label: "Panel",
-    description: "Three distinct voices debating the topic.",
-    castSize: 3,
-    engine: "fish" as const,
-  },
-  {
     id: "newscast",
     label: "Anchor",
     description: "A single host delivering a clean, authoritative report.",
     castSize: 1,
+    engine: "fish" as const,
+  },
+  {
+    id: "pals",
+    label: "Pals",
+    description: "Two co-hosts riffing as equals — banter, not interview.",
+    castSize: 2,
+    engine: "fish" as const,
+  },
+  {
+    id: "panel",
+    label: "Panel",
+    description: "Three distinct voices debating the topic.",
+    castSize: 3,
     engine: "fish" as const,
   },
 ] as const;
@@ -105,25 +129,25 @@ export const UI_FORMATS: {
   disabled: boolean;
 }[] = [
   {
+    id: "newscast",
+    label: "Anchor",
+    description: "One host. Clean, authoritative delivery.",
+    accent: "pink",
+    disabled: false,
+  },
+  {
+    id: "pals",
+    label: "Pals",
+    description: "Two co-hosts. Banter and chemistry.",
+    accent: "mint",
+    disabled: false,
+  },
+  {
     id: "panel",
     label: "Panel",
     description: "Three voices. Contrast and debate.",
     accent: "sky",
     disabled: false,
-  },
-  {
-    id: "newscast",
-    label: "Anchor",
-    description: "One host. Clean news delivery.",
-    accent: "pink",
-    disabled: false,
-  },
-  {
-    id: "story",
-    label: "Story",
-    description: "Narrated and cinematic. Coming soon.",
-    accent: "mint",
-    disabled: true,
   },
 ];
 

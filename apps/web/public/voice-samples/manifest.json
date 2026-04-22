@@ -1,42 +1,74 @@
 [
   {
-    "id": "el-jon",
-    "label": "Jon",
-    "url": "/voice-samples/el-jon.mp3"
+    "id": "fa-paula",
+    "label": "Paula",
+    "language": "en",
+    "url": "/voice-samples/fa-paula.mp3"
   },
   {
-    "id": "el-lauren",
-    "label": "Lauren",
-    "url": "/voice-samples/el-lauren.mp3"
+    "id": "fa-sarah",
+    "label": "Sarah",
+    "language": "en",
+    "url": "/voice-samples/fa-sarah.mp3"
   },
   {
-    "id": "el-michael",
-    "label": "Michael",
-    "url": "/voice-samples/el-michael.mp3"
+    "id": "fa-allie",
+    "label": "Allie",
+    "language": "en",
+    "url": "/voice-samples/fa-allie.mp3"
   },
   {
-    "id": "el-maya",
-    "label": "Maya",
-    "url": "/voice-samples/el-maya.mp3"
+    "id": "fa-jim",
+    "label": "Jim",
+    "language": "en",
+    "url": "/voice-samples/fa-jim.mp3"
   },
   {
-    "id": "el-luna",
-    "label": "Luna",
-    "url": "/voice-samples/el-luna.mp3"
+    "id": "fa-charlie",
+    "label": "Charlie",
+    "language": "en",
+    "url": "/voice-samples/fa-charlie.mp3"
   },
   {
-    "id": "el-aiden",
-    "label": "Aiden",
-    "url": "/voice-samples/el-aiden.mp3"
+    "id": "fa-alex",
+    "label": "Alex",
+    "language": "en",
+    "url": "/voice-samples/fa-alex.mp3"
   },
   {
-    "id": "el-princess",
-    "label": "Princess",
-    "url": "/voice-samples/el-princess.mp3"
+    "id": "fa-juan",
+    "label": "Juan",
+    "language": "es",
+    "url": "/voice-samples/fa-juan.mp3"
   },
   {
-    "id": "el-wright",
-    "label": "Wright",
-    "url": "/voice-samples/el-wright.mp3"
+    "id": "fa-valentino",
+    "label": "Valentino",
+    "language": "es",
+    "url": "/voice-samples/fa-valentino.mp3"
+  },
+  {
+    "id": "fa-jesus",
+    "label": "Jesus",
+    "language": "es",
+    "url": "/voice-samples/fa-jesus.mp3"
+  },
+  {
+    "id": "fa-maria",
+    "label": "Maria",
+    "language": "es",
+    "url": "/voice-samples/fa-maria.mp3"
+  },
+  {
+    "id": "fa-isabel",
+    "label": "Isabel",
+    "language": "es",
+    "url": "/voice-samples/fa-isabel.mp3"
+  },
+  {
+    "id": "fa-alejandra",
+    "label": "Alejandra",
+    "language": "es",
+    "url": "/voice-samples/fa-alejandra.mp3"
   }
 ]

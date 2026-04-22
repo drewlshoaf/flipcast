@@ -8,8 +8,9 @@ import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { ForMeRail } from "@/components/library/for-me-rail";
 
 const FORMAT_LABEL: Record<string, string> = {
-  panel: "Panel",
   newscast: "Anchor",
+  pals: "Pals",
+  panel: "Panel",
 };
 
 function statusBadge(status: string): { label: string; chip: string } {

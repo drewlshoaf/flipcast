@@ -14,7 +14,7 @@ interface StudioPageProps {
   };
 }
 
-const VALID_FORMATS: FlipcastFormat[] = ["panel", "newscast"];
+const VALID_FORMATS: FlipcastFormat[] = ["newscast", "pals", "panel"];
 const VALID_ENGINES = ["fish"] as const;
 
 export default async function StudioPage({ searchParams }: StudioPageProps) {
