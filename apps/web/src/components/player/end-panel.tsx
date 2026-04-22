@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  SHARE_TARGETS,
+  embedSnippet,
+  playerUrl,
+} from "@/lib/share";
 
 type Phase = "rate" | "share" | "thanks";
 
@@ -59,7 +64,7 @@ export function EndPanel({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setShareUrl(`${window.location.origin}/player/${requestId}`);
+    setShareUrl(playerUrl(requestId));
   }, [requestId]);
 
   function vote(v: "up" | "down") {
@@ -156,41 +161,14 @@ export function EndPanel({
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-            <ShareTile
-              label="X"
-              accent="bg-ink-900 text-white"
-              href={twitterHref(topic, shareUrl)}
-            />
-            <ShareTile
-              label="Facebook"
-              accent="bg-sky-600 text-white"
-              href={facebookHref(shareUrl)}
-            />
-            <ShareTile
-              label="LinkedIn"
-              accent="bg-sky-700 text-white"
-              href={linkedinHref(shareUrl)}
-            />
-            <ShareTile
-              label="Reddit"
-              accent="bg-orange-500 text-white"
-              href={redditHref(topic, shareUrl)}
-            />
-            <ShareTile
-              label="WhatsApp"
-              accent="bg-emerald-500 text-white"
-              href={whatsappHref(topic, shareUrl)}
-            />
-            <ShareTile
-              label="Threads"
-              accent="bg-ink-900 text-white"
-              href={threadsHref(topic, shareUrl)}
-            />
-            <ShareTile
-              label="Email"
-              accent="bg-violet-500 text-white"
-              href={emailHref(topic, shareUrl)}
-            />
+            {SHARE_TARGETS.map((t) => (
+              <ShareTile
+                key={t.key}
+                label={t.label}
+                accent={t.accent}
+                href={t.build(topic, shareUrl)}
+              />
+            ))}
             {typeof navigator !== "undefined" && "share" in navigator && (
               <ShareTile
                 label="More…"
@@ -223,7 +201,7 @@ export function EndPanel({
             <div className="mt-3">
               <textarea
                 readOnly
-                value={`<iframe src="${shareUrl}" width="100%" height="640" frameborder="0" allow="autoplay" loading="lazy"></iframe>`}
+                value={embedSnippet(shareUrl)}
                 className="h-24 w-full resize-none rounded-2xl bg-white/85 p-3 font-mono text-[11px] leading-relaxed text-ink-700 ring-1 ring-slate-200"
                 onFocus={(e) => e.currentTarget.select()}
               />
@@ -306,39 +284,3 @@ function ShareTile({
   );
 }
 
-// ---- Share URL builders ----
-
-function twitterHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio`);
-  return `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
-}
-
-function facebookHref(url: string): string {
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-}
-
-function linkedinHref(url: string): string {
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-}
-
-function redditHref(topic: string, url: string): string {
-  return `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(topic)}`;
-}
-
-function whatsappHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio — ${url}`);
-  return `https://wa.me/?text=${text}`;
-}
-
-function threadsHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio — ${url}`);
-  return `https://www.threads.net/intent/post?text=${text}`;
-}
-
-function emailHref(topic: string, url: string): string {
-  const subject = encodeURIComponent(`flip.audio — ${topic}`);
-  const body = encodeURIComponent(
-    `Thought you'd like this:\n\n"${topic}"\n\n${url}`,
-  );
-  return `mailto:?subject=${subject}&body=${body}`;
-}

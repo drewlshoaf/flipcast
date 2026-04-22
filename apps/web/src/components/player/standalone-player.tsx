@@ -9,6 +9,7 @@ import {
   type SseEvent,
 } from "@flipaudio/types";
 import { EndPanel } from "@/components/player/end-panel";
+import { PlayerActions } from "@/components/player/player-actions";
 
 interface FlipcastRow {
   id: string;
@@ -55,8 +56,9 @@ function itemTypeLabel(item: SequenceItem): string {
 }
 
 const FORMAT_LABEL: Record<string, string> = {
-  panel: "Panel",
   newscast: "Anchor",
+  pals: "Pals",
+  panel: "Panel",
 };
 
 interface Props {
@@ -369,9 +371,12 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
               <span className="chip chip-pink">{formatLabel}</span>
               {vibeLabel && <span className="chip chip-mint">{vibeLabel}</span>}
             </div>
-            <h1 className="text-4xl font-semibold leading-tight tracking-tight text-ink-900">
-              {row.topic}
-            </h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-4xl font-semibold leading-tight tracking-tight text-ink-900">
+                {row.topic}
+              </h1>
+              <PlayerActions requestId={requestId} topic={row.topic} />
+            </div>
             {row.topicContext && (
               <p className="mt-3 text-base leading-relaxed text-ink-500">
                 {row.topicContext}

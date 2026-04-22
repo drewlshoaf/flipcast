@@ -12,6 +12,7 @@ import {
 } from "@flipaudio/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 import { EndPanel } from "@/components/player/end-panel";
+import { PlayerActions } from "@/components/player/player-actions";
 
 type Stage = "idle" | "playing" | "waiting" | "finished";
 
@@ -254,9 +255,18 @@ export function EpisodeModal(props: EpisodeModalProps) {
                 </span>
               )}
             </div>
-            <h2 className="line-clamp-2 text-xl font-semibold tracking-tight text-ink-900">
-              {topic}
-            </h2>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="line-clamp-2 text-xl font-semibold tracking-tight text-ink-900">
+                {topic}
+              </h2>
+              {requestId && (
+                <PlayerActions
+                  requestId={requestId}
+                  topic={topic}
+                  size="compact"
+                />
+              )}
+            </div>
           </header>
 
           {/* Progress — passive, not scrubbable */}
