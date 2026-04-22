@@ -46,21 +46,29 @@ export function HomePage({ sessionUser }: HomePageProps) {
 
       {/* Hero with bubble field */}
       <section className="relative mx-auto mb-4 min-h-[520px] overflow-visible">
-        {/* Bubble field — hidden on small screens to keep things calm */}
+        {/* Bubble field — hidden on small screens to keep things calm.
+            Positioning (translate + rotate) lives on the wrapper and hover
+            styles live on the <Link>; otherwise the inline `transform`
+            overrides Tailwind's hover:-translate-y-0.5 utility and the
+            chips feel dead. */}
         <div className="pointer-events-none absolute inset-0 hidden md:block">
           {BUBBLES.map((b) => (
-            <Link
+            <div
               key={b.text}
-              href={studioHref(b.text)}
-              className={`pointer-events-auto absolute inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:-translate-y-0.5 hover:shadow-cardHover ${bubbleClass(b)}`}
+              className="pointer-events-auto absolute z-0 hover:z-10"
               style={{
                 left: `${b.x}%`,
                 top: `${b.y}%`,
                 transform: `translate(-50%, -50%) rotate(${b.tilt ?? 0}deg)`,
               }}
             >
-              {b.text}
-            </Link>
+              <Link
+                href={studioHref(b.text)}
+                className={`inline-flex cursor-pointer items-center rounded-full font-medium ring-1 shadow-card transition hover:-translate-y-0.5 hover:scale-[1.04] hover:shadow-cardHover ${bubbleClass(b)}`}
+              >
+                {b.text}
+              </Link>
+            </div>
           ))}
         </div>
 
