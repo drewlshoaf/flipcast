@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
-import { PROMPTS, promptClass } from "@/components/home/prompts";
+import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
 import { SurpriseMe } from "@/components/home/surprise-me";
+import {
+  SAMPLE_PROMPTS,
+  PROMPT_TILE_CLASS,
+  PROMPT_DOT_CLASS,
+} from "@/lib/sample-prompts";
 
 function studioHref(topic?: string): string {
   if (!topic) return "/studio";
@@ -39,22 +44,22 @@ export function HomePage({ sessionUser }: HomePageProps) {
         </div>
       </header>
 
-      {/* Hero with prompt field */}
+      {/* Hero with bubble field */}
       <section className="relative mx-auto mb-4 min-h-[520px] overflow-visible">
-        {/* Prompt field — hidden on small screens to keep things calm */}
+        {/* Bubble field — hidden on small screens to keep things calm */}
         <div className="pointer-events-none absolute inset-0 hidden md:block">
-          {PROMPTS.map((p) => (
+          {BUBBLES.map((b) => (
             <Link
-              key={p.text}
-              href={studioHref(p.text)}
-              className={`pointer-events-auto absolute inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:-translate-y-0.5 hover:shadow-cardHover ${promptClass(p)}`}
+              key={b.text}
+              href={studioHref(b.text)}
+              className={`pointer-events-auto absolute inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:-translate-y-0.5 hover:shadow-cardHover ${bubbleClass(b)}`}
               style={{
-                left: `${p.x}%`,
-                top: `${p.y}%`,
-                transform: `translate(-50%, -50%) rotate(${p.tilt ?? 0}deg)`,
+                left: `${b.x}%`,
+                top: `${b.y}%`,
+                transform: `translate(-50%, -50%) rotate(${b.tilt ?? 0}deg)`,
               }}
             >
-              {p.text}
+              {b.text}
             </Link>
           ))}
         </div>
@@ -108,19 +113,54 @@ export function HomePage({ sessionUser }: HomePageProps) {
         </div>
       </section>
 
-      {/* Mobile-only fallback prompt row — hero's prompt field is hidden below md */}
+      {/* Mobile-only fallback chip row, since the bubble field is hidden */}
       <section className="mb-12 md:hidden">
         <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
-          Prompts
+          Try one of these
         </div>
         <div className="flex flex-wrap gap-2">
-          {PROMPTS.slice(0, 8).map((p) => (
+          {BUBBLES.slice(0, 8).map((b) => (
+            <Link
+              key={b.text}
+              href={studioHref(b.text)}
+              className={`inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:shadow-cardHover ${bubbleClass(b)}`}
+            >
+              {b.text}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* More sample prompts */}
+      <section className="mb-12">
+        <div className="mb-6 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-semibold tracking-tight text-ink-900 md:text-3xl">
+              More to start from.
+            </h2>
+            <p className="mt-1 text-sm text-ink-500">
+              Tap any prompt — the studio opens with it filled in.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {SAMPLE_PROMPTS.map((p) => (
             <Link
               key={p.text}
               href={studioHref(p.text)}
-              className={`inline-flex items-center rounded-full font-medium ring-1 shadow-card transition hover:shadow-cardHover ${promptClass(p)}`}
+              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-sm font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card ${PROMPT_TILE_CLASS[p.accent]}`}
             >
-              {p.text}
+              <span
+                className={`inline-block h-2 w-2 shrink-0 rounded-full ${PROMPT_DOT_CLASS[p.accent]}`}
+                aria-hidden
+              />
+              <span className="leading-snug">{p.text}</span>
+              <span
+                className="ml-auto text-ink-400 transition group-hover:translate-x-0.5"
+                aria-hidden
+              >
+                →
+              </span>
             </Link>
           ))}
         </div>

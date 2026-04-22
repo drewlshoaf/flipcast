@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  PROMPTS,
   PROMPT_DOT_CLASS,
   PROMPT_TILE_CLASS,
-} from "@/components/home/prompts";
+  SAMPLE_PROMPTS,
+} from "@/lib/sample-prompts";
 
 interface Props {
   onSelect: (topic: string) => void;
@@ -15,7 +15,7 @@ export function IdeaRail({ onSelect }: Props) {
     <aside className="glass sticky top-6 rounded-3xl p-6 shadow-card">
       <div className="mb-5">
         <h2 className="text-lg font-semibold tracking-tight text-ink-900">
-          Prompts
+          Ideas
         </h2>
         <p className="text-xs text-ink-400">
           Tap any prompt to drop it into your topic.
@@ -23,7 +23,7 @@ export function IdeaRail({ onSelect }: Props) {
       </div>
 
       <ul className="flex flex-col gap-2">
-        {PROMPTS.map((p) => (
+        {SAMPLE_PROMPTS.map((p) => (
           <li key={p.text}>
             <button
               type="button"

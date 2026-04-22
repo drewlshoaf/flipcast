@@ -1,15 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { PROMPTS } from "./prompts";
+import { BUBBLES } from "./topic-bubbles";
 
-// Picks a random prompt and routes to /studio with it prefilled.
+// Picks a random bubble topic and routes to /studio with it prefilled.
 // Tiny client island so the rest of the home page can stay an RSC.
 export function SurpriseMe() {
   const router = useRouter();
 
   function go() {
-    const pick = PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
+    const pick = BUBBLES[Math.floor(Math.random() * BUBBLES.length)];
     if (!pick) return;
     router.push(`/studio?topic=${encodeURIComponent(pick.text)}`);
   }
