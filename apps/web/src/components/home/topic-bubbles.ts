@@ -45,8 +45,8 @@ export const BUBBLES: Bubble[] = [
 
   // Lower-mid (below the read zone)
   { text: "why is everyone running ultras?", x: 22, y: 86, size: "md", accent: "pink", tilt: -1 },
-  { text: "is the creator economy sustainable?", x: 42, y: 90, size: "sm", accent: "violet" },
-  { text: "the new rules of workplace dating", x: 60, y: 88, size: "md", accent: "mint", tilt: 1 },
+  { text: "is the creator economy sustainable?", x: 42, y: 96, size: "sm", accent: "violet" },
+  { text: "the new rules of workplace dating", x: 60, y: 94, size: "md", accent: "mint", tilt: 1 },
 
   // Ambient smaller chips scattered for density
   { text: "podcast vs. talk radio", x: 14, y: 14, size: "sm", accent: "sky", tilt: -3 },
