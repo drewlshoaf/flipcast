@@ -39,7 +39,7 @@ export const BUBBLES: Bubble[] = [
   // Right side
   { text: "what's the deal with 'quiet luxury'?", x: 86, y: 16, size: "md", accent: "violet", tilt: 3 },
   { text: "are headphones the new cigarettes?", x: 90, y: 32, size: "md", accent: "pink" },
-  { text: "the truth about cottage-core finance", x: 84, y: 48, size: "lg", accent: "mint", tilt: -2 },
+  { text: "the truth about cottage-core finance", x: 78, y: 48, size: "lg", accent: "mint", tilt: -2 },
   { text: "why everyone soft-launches now", x: 91, y: 64, size: "md", accent: "sky" },
   { text: "the unironic comeback of the landline", x: 86, y: 80, size: "md", accent: "amber", tilt: 2 },
 
@@ -57,12 +57,12 @@ export const BUBBLES: Bubble[] = [
   { text: "indie journalism's quiet consolidation", x: 78, y: 76, size: "sm", accent: "sky" },
   { text: "why streaming peaked", x: 12, y: 30, size: "sm", accent: "mint", tilt: 2 },
   // Filling the gap right of "why streaming peaked":
-  { text: "are gen-z drinking less?", x: 24, y: 32, size: "sm", accent: "pink", tilt: -1 },
-  { text: "the quiet death of cable", x: 30, y: 26, size: "sm", accent: "violet", tilt: 2 },
+  { text: "are gen-z drinking less?", x: 24, y: 38, size: "sm", accent: "pink", tilt: -1 },
+  { text: "the quiet death of cable", x: 24, y: 20, size: "sm", accent: "violet", tilt: 2 },
   { text: "newsletters, honestly", x: 88, y: 24, size: "sm", accent: "pink", tilt: -2 },
   // Filling the gap left of "newsletters, honestly":
   { text: "why Formula 1 finally cracked America", x: 66, y: 22, size: "md", accent: "sky" },
-  { text: "the print magazine comeback", x: 74, y: 30, size: "sm", accent: "amber", tilt: -2 },
+  { text: "the print magazine comeback", x: 74, y: 36, size: "sm", accent: "amber", tilt: -2 },
   { text: "remote work: winning or losing?", x: 12, y: 62, size: "sm", accent: "amber" },
   { text: "the Slack etiquette wars", x: 88, y: 56, size: "sm", accent: "violet", tilt: 1 },
 ];
