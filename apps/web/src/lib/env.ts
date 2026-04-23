@@ -16,13 +16,8 @@ export const env = {
   s3AccessKey: process.env.S3_ACCESS_KEY ?? "minioadmin",
   s3SecretKey: process.env.S3_SECRET_KEY ?? "minioadmin",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  defaultSpeed: clampSpeed(
-    process.env.FLIPAUDIO_DEFAULT_SPEED ?? process.env.FLIPCAST_DEFAULT_SPEED,
-    1.0,
-  ),
-  defaultEngine: resolveEngine(
-    process.env.FLIPAUDIO_DEFAULT_ENGINE ?? process.env.FLIPCAST_DEFAULT_ENGINE,
-  ),
+  defaultSpeed: clampSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
+  defaultEngine: resolveEngine(process.env.FLIPCAST_DEFAULT_ENGINE),
   authSecret: process.env.AUTH_SECRET ?? "",
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",

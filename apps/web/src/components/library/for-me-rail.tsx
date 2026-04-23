@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 interface InterestPill {
   id: string;
@@ -16,6 +17,7 @@ interface ForMePayload {
 }
 
 export function ForMeRail() {
+  const t = useT();
   const [data, setData] = useState<ForMePayload | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,7 @@ export function ForMeRail() {
     return (
       <section className="glass rounded-3xl p-6 shadow-card">
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-          Ideas for you
+          {t.profile.forMeTitle}
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -61,17 +63,17 @@ export function ForMeRail() {
     return (
       <section className="glass rounded-3xl p-6 shadow-card">
         <div className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-          Ideas for you
+          {t.profile.forMeTitle}
         </div>
         <p className="mt-3 text-sm text-ink-500">
-          Pick a few interests on your{" "}
+          {t.profile.forMeEmptyInline}{" "}
           <Link
             href="/profile"
             className="font-semibold text-ink-900 underline decoration-pink-300 underline-offset-4 hover:text-pink-600"
           >
-            profile
+            {t.profile.forMeProfileLink}
           </Link>{" "}
-          to get topic suggestions tuned to you.
+          {t.profile.forMeEmptyInlineTail}
         </p>
       </section>
     );
@@ -82,32 +84,36 @@ export function ForMeRail() {
       <div className="flex items-end justify-between gap-3">
         <div>
           <div className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-            Ideas for you
+            {t.profile.forMeTitle}
           </div>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {data.interests.map((i) => (
-              <span
-                key={i.id}
-                className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-ink-700 ring-1 ring-slate-200"
-              >
-                <span aria-hidden>{i.emoji}</span>
-                {i.label}
-              </span>
-            ))}
+            {data.interests.map((i) => {
+              const label =
+                t.interests[i.id as keyof typeof t.interests] ?? i.label;
+              return (
+                <span
+                  key={i.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-ink-700 ring-1 ring-slate-200"
+                >
+                  <span aria-hidden>{i.emoji}</span>
+                  {label}
+                </span>
+              );
+            })}
           </div>
         </div>
         <button
           type="button"
           onClick={() => void load()}
           className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-ink-500 ring-1 ring-slate-200 transition hover:text-pink-600 hover:ring-pink-300"
-          title="Generate fresh ideas"
+          title={t.profile.forMeRefreshTitle}
         >
           ↻
         </button>
       </div>
       {data.ideas.length === 0 ? (
         <p className="mt-4 text-sm text-ink-500">
-          Couldn't generate fresh ideas just now — try the refresh.
+          {t.profile.forMeNoIdeas}
         </p>
       ) : (
         <ul className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">

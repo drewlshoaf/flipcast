@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { ClaudeUsageAggregate } from "@flipaudio/types";
+import type { ClaudeUsageAggregate } from "@flipcast/types";
 
 export interface AdminItem {
   kind: "station_intro" | "ad" | "welcome" | "scene";
@@ -17,7 +17,6 @@ export interface AdminFlipcastRow {
   ownerEmail: string | null;
   topic: string;
   format: string;
-  vibe: string | null;
   status: string;
   durationTargetSeconds: number;
   items: AdminItem[];
@@ -27,8 +26,11 @@ export interface AdminFlipcastRow {
   sceneChars: number;
   totalChars: number;
   claudeCostUsd: number | null;
-  elevenLabsCostUsd: number;
+  fishCostUsd: number;
   claudeUsage: ClaudeUsageAggregate | null;
+  // Pre-formatted transcript (Markdown-ish) rendered server-side so the
+  // admin detail view can show it without a round trip.
+  transcript: string;
 }
 
 type SortKey =
@@ -43,7 +45,7 @@ type SortKey =
   | "adChars"
   | "totalChars"
   | "claudeCostUsd"
-  | "elevenLabsCostUsd";
+  | "fishCostUsd";
 
 type SortDir = "asc" | "desc";
 
@@ -156,6 +158,34 @@ export function FlipcastsAdminTable({ rows }: { rows: AdminFlipcastRow[] }) {
       .finally(() => setBusyId(null));
   };
 
+  const [deletingAll, setDeletingAll] = useState(false);
+  const handleDeleteAll = () => {
+    // Two-step confirm — bulk deletes are one of the few places where a
+    // double-prompt is worth the friction.
+    const count = rows.length;
+    if (count === 0) return;
+    if (
+      !confirm(
+        `Delete ALL ${count} flipcast${count === 1 ? "" : "s"}? This clears the DB rows only — S3 objects will be orphaned. Cannot be undone.`,
+      )
+    )
+      return;
+    if (!confirm("Really delete every single one? Last chance.")) return;
+    setDeletingAll(true);
+    fetch("/api/admin/flipcasts/delete-all", { method: "DELETE" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`${res.status}`);
+        const body = await res.json().catch(() => ({}));
+        startTransition(() => router.refresh());
+        if (typeof body?.deleted === "number") {
+          // Tiny visual confirmation.
+          console.log(`[admin] deleted ${body.deleted} flipcasts`);
+        }
+      })
+      .catch((e) => alert(`Delete all failed: ${e.message}`))
+      .finally(() => setDeletingAll(false));
+  };
+
   return (
     <div className="glass overflow-hidden rounded-3xl shadow-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-ink-100 p-4">
@@ -180,6 +210,15 @@ export function FlipcastsAdminTable({ rows }: { rows: AdminFlipcastRow[] }) {
         <span className="text-xs text-ink-400">
           {filtered.length} / {rows.length}
         </span>
+        <button
+          type="button"
+          onClick={handleDeleteAll}
+          disabled={deletingAll || rows.length === 0}
+          className="ml-auto rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-40"
+          title="Delete every flipcast in the DB"
+        >
+          {deletingAll ? "Deleting…" : `Delete all (${rows.length})`}
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -217,8 +256,8 @@ export function FlipcastsAdminTable({ rows }: { rows: AdminFlipcastRow[] }) {
               <Th onSort={() => onSort("claudeCostUsd")} active={sortKey === "claudeCostUsd"} dir={sortDir} align="right">
                 Claude $
               </Th>
-              <Th onSort={() => onSort("elevenLabsCostUsd")} active={sortKey === "elevenLabsCostUsd"} dir={sortDir} align="right">
-                11Labs $
+              <Th onSort={() => onSort("fishCostUsd")} active={sortKey === "fishCostUsd"} dir={sortDir} align="right">
+                Fish $
               </Th>
               <th className="px-3 py-3" />
             </tr>
@@ -268,7 +307,7 @@ export function FlipcastsAdminTable({ rows }: { rows: AdminFlipcastRow[] }) {
                       {fmtUsd(r.claudeCostUsd)}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums text-ink-700">
-                      {fmtUsd(r.elevenLabsCostUsd)}
+                      {fmtUsd(r.fishCostUsd)}
                     </td>
                     <td className="whitespace-nowrap px-3 py-2 text-right">
                       <button
@@ -349,7 +388,9 @@ function Th({
 function ExpandedDetail({ row }: { row: AdminFlipcastRow }) {
   const totalDuration = row.items.reduce((s, i) => s + i.durationSec, 0);
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="flex flex-col gap-6">
+      <TranscriptPanel transcript={row.transcript} />
+      <div className="grid gap-6 md:grid-cols-2">
       <div>
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-500">
           Sequence breakdown
@@ -409,8 +450,8 @@ function ExpandedDetail({ row }: { row: AdminFlipcastRow }) {
           <div className="my-2 border-t border-ink-100" />
           <Row label="Grand total chars" value={fmtInt(row.totalChars)} bold />
           <Row
-            label="11Labs cost (scene + welcome only)"
-            value={fmtUsd(row.elevenLabsCostUsd)}
+            label="Fish TTS cost (scene + welcome only)"
+            value={fmtUsd(row.fishCostUsd)}
             bold
           />
         </div>
@@ -463,6 +504,49 @@ function ExpandedDetail({ row }: { row: AdminFlipcastRow }) {
           id: <span className="font-mono">{row.id}</span>
         </div>
       </div>
+      </div>
+    </div>
+  );
+}
+
+function TranscriptPanel({ transcript }: { transcript: string }) {
+  const [copied, setCopied] = useState(false);
+  const isEmpty = transcript.trim().length === 0;
+
+  function onCopy() {
+    if (!transcript) return;
+    navigator.clipboard
+      .writeText(transcript)
+      .then(() => {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+      })
+      .catch(() => {
+        /* permission denied or non-secure context; fall back silently */
+      });
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-ink-500">
+          Transcript
+        </div>
+        <button
+          type="button"
+          onClick={onCopy}
+          disabled={isEmpty}
+          className="rounded-full border border-ink-200 bg-white px-3 py-1 text-xs font-medium text-ink-700 hover:bg-ink-50 disabled:opacity-40"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+      <textarea
+        readOnly
+        value={isEmpty ? "No transcript recorded yet." : transcript}
+        onFocus={(e) => e.currentTarget.select()}
+        className="h-64 w-full resize-y rounded-2xl border border-ink-100 bg-white p-4 font-mono text-xs leading-relaxed text-ink-800"
+      />
     </div>
   );
 }

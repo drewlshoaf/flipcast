@@ -6,6 +6,7 @@ import {
   embedSnippet,
   playerUrl,
 } from "@/lib/share";
+import { useT } from "@/lib/i18n/client";
 
 type Expanded = "share" | "embed" | null;
 
@@ -17,7 +18,7 @@ interface Props {
   size?: "compact" | "default";
 }
 
-const FEEDBACK_KEY = (rid: string) => `flipaudio:feedback:${rid}`;
+const FEEDBACK_KEY = (rid: string) => `flipcast:feedback:${rid}`;
 
 function readPriorVote(rid: string): "up" | "down" | null {
   try {
@@ -50,6 +51,7 @@ export function PlayerActions({
   topic,
   size = "default",
 }: Props) {
+  const t = useT();
   const [liked, setLiked] = useState<"up" | "down" | null>(null);
   const [expanded, setExpanded] = useState<Expanded>(null);
   const [shareUrl, setShareUrl] = useState("");
@@ -105,8 +107,8 @@ export function PlayerActions({
     if (typeof navigator === "undefined" || !("share" in navigator)) return;
     navigator
       .share({
-        title: `flip.audio — ${topic}`,
-        text: `Listen to "${topic}" on flip.audio`,
+        title: t.endPanel.nativeShareTitle.replace("{topic}", topic),
+        text: t.endPanel.nativeShareText.replace("{topic}", topic),
         url: shareUrl,
       })
       .catch(() => void 0);
@@ -121,7 +123,7 @@ export function PlayerActions({
         <ToolButton
           active={liked === "up"}
           onClick={toggleLike}
-          title={liked === "up" ? "Liked — tap to undo" : "Like this flip"}
+          title={liked === "up" ? t.actions.likedUndo : t.actions.likeThis}
           className={btnSize}
         >
           <svg
@@ -141,7 +143,7 @@ export function PlayerActions({
         <ToolButton
           active={expanded === "share"}
           onClick={() => setExpanded(expanded === "share" ? null : "share")}
-          title="Share"
+          title={t.actions.shareTitle}
           className={btnSize}
         >
           <svg
@@ -165,7 +167,7 @@ export function PlayerActions({
         <ToolButton
           active={expanded === "embed"}
           onClick={() => setExpanded(expanded === "embed" ? null : "embed")}
-          title="Embed"
+          title={t.actions.embedTitle}
           className={btnSize}
         >
           <svg
@@ -188,26 +190,28 @@ export function PlayerActions({
       {expanded === "share" && (
         <div className="absolute right-0 top-12 z-30 w-[320px] rounded-3xl bg-white p-4 ring-1 ring-slate-200 shadow-cardHover">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-ink-900">Share</h4>
+            <h4 className="text-sm font-semibold text-ink-900">
+              {t.actions.shareTitle}
+            </h4>
             <button
               type="button"
               onClick={() => setExpanded(null)}
-              aria-label="Close"
+              aria-label={t.actions.closeAria}
               className="text-ink-400 hover:text-ink-700"
             >
               ✕
             </button>
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {SHARE_TARGETS.map((t) => (
+            {SHARE_TARGETS.map((target) => (
               <a
-                key={t.key}
-                href={t.build(topic, shareUrl)}
+                key={target.key}
+                href={target.build(topic, shareUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`inline-flex h-10 items-center justify-center rounded-xl px-2 text-[11px] font-semibold ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-card ${t.accent}`}
+                className={`inline-flex h-10 items-center justify-center rounded-xl px-2 text-[11px] font-semibold ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-card ${target.accent}`}
               >
-                {t.label}
+                {target.label}
               </a>
             ))}
             {typeof navigator !== "undefined" && "share" in navigator && (
@@ -216,7 +220,7 @@ export function PlayerActions({
                 onClick={nativeShare}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-pink-500 px-2 text-[11px] font-semibold text-white ring-1 ring-slate-200/70 transition hover:-translate-y-0.5 hover:shadow-card"
               >
-                More…
+                {t.endPanel.shareMore}
               </button>
             )}
           </div>
@@ -226,7 +230,7 @@ export function PlayerActions({
             className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-white px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
           >
             <span aria-hidden>🔗</span>
-            {copied ? "Copied!" : "Copy link"}
+            {copied ? t.endPanel.copied : t.endPanel.copyLink}
           </button>
         </div>
       )}
@@ -234,18 +238,20 @@ export function PlayerActions({
       {expanded === "embed" && (
         <div className="absolute right-0 top-12 z-30 w-[360px] rounded-3xl bg-white p-4 ring-1 ring-slate-200 shadow-cardHover">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-ink-900">Embed</h4>
+            <h4 className="text-sm font-semibold text-ink-900">
+              {t.actions.embedTitle}
+            </h4>
             <button
               type="button"
               onClick={() => setExpanded(null)}
-              aria-label="Close"
+              aria-label={t.actions.closeAria}
               className="text-ink-400 hover:text-ink-700"
             >
               ✕
             </button>
           </div>
           <p className="mb-2 text-xs text-ink-500">
-            Drop this iframe anywhere — autoplay-friendly.
+            {t.actions.embedBlurb}
           </p>
           <textarea
             readOnly
@@ -258,7 +264,7 @@ export function PlayerActions({
             onClick={copyEmbed}
             className="mt-2 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-ink-900 px-4 text-sm font-semibold text-white transition hover:scale-[1.01]"
           >
-            {embedCopied ? "Copied!" : "Copy snippet"}
+            {embedCopied ? t.endPanel.copied : t.actions.copySnippet}
           </button>
         </div>
       )}

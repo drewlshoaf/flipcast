@@ -4,7 +4,7 @@ import {
   flipcastRequests,
   transcripts,
   transcriptSegments,
-} from "@flipaudio/server-db";
+} from "@flipcast/server-db";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 

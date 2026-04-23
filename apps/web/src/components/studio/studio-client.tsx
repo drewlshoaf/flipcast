@@ -3,45 +3,43 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
-  AVAILABLE_VIBES,
-  LANGUAGES,
   UI_FORMATS,
   VOICES,
   formatConfig,
   lengthPreset,
+  stationIntroUrl,
+  voiceGroupsFor,
   type FlipcastFormat,
-  type FlipcastVibe,
   type SequenceItem,
   type SequencePlan,
+  type VoiceGroup,
   type VoiceLanguage,
   type VoiceOption,
-} from "@flipaudio/types";
+} from "@flipcast/types";
+import { useT } from "@/lib/i18n/client";
 import type {
   Character,
   SceneOutline,
   SseEvent,
   TranscriptTurn,
-} from "@flipaudio/types";
+} from "@flipcast/types";
+import { AdminTestPanel } from "./admin-test-panel";
 import { IdeaRail } from "./idea-rail";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { EpisodeModal } from "@/components/player/episode-modal";
 import { TopicComposer } from "@/components/topic-composer";
 
-const ROLE_LABEL: Record<Character["role"], string> = {
-  moderator: "Moderator",
-  panelist_1: "Panelist",
-  panelist_2: "Panelist",
-};
-
 type VoiceEngine = "fish";
 type PlaybackStage = "idle" | "playing" | "waiting" | "finished";
 
-const REMIX_ACTIONS = [
-  { id: "shorter-intro", label: "Shorter intro" },
-  { id: "more-contrast", label: "More contrast" },
-  { id: "softer-tone", label: "Softer tone" },
-  { id: "stronger-ending", label: "Stronger ending" },
-];
+// Remix action ids are stable; labels come from the active dictionary.
+const REMIX_ACTION_IDS = [
+  "shorter-intro",
+  "more-contrast",
+  "softer-tone",
+  "stronger-ending",
+] as const;
+type RemixActionId = (typeof REMIX_ACTION_IDS)[number];
 
 const FORMAT_ACCENTS = {
   sky: {
@@ -64,37 +62,10 @@ const FORMAT_ACCENTS = {
   },
 } as const;
 
-const VIBE_ACCENTS: Record<
-  string,
-  { chip: string; ring: string; bg: string }
-> = {
-  curious: {
-    chip: "bg-cyan-100 text-cyan-700",
-    ring: "ring-cyan-300",
-    bg: "bg-cyan-50/50",
-  },
-  playful: {
-    chip: "bg-pink-100 text-pink-700",
-    ring: "ring-pink-300",
-    bg: "bg-pink-50/50",
-  },
-  sincere: {
-    chip: "bg-teal-100 text-teal-700",
-    ring: "ring-teal-300",
-    bg: "bg-teal-50/50",
-  },
-  relaxed: {
-    chip: "bg-emerald-100 text-emerald-700",
-    ring: "ring-emerald-300",
-    bg: "bg-emerald-50/50",
-  },
-};
-
 interface StudioClientProps {
   defaultEngine: VoiceEngine;
   initialTopic?: string;
   initialFormat?: FlipcastFormat;
-  initialVibe?: FlipcastVibe;
   initialEngine?: VoiceEngine;
   autoStart?: boolean;
   sessionUser: SessionUser | null;
@@ -104,19 +75,28 @@ export function StudioClient({
   defaultEngine,
   initialTopic = "",
   initialFormat,
-  initialVibe,
   initialEngine,
   autoStart,
   sessionUser,
 }: StudioClientProps) {
+  const t = useT();
   const [topic, setTopic] = useState(initialTopic);
   const [format, setFormat] = useState<FlipcastFormat>(initialFormat ?? "panel");
-  const [vibe, setVibe] = useState<FlipcastVibe>(initialVibe ?? "curious");
-  const [language, setLanguage] = useState<VoiceLanguage>("en");
+  // English-only after the Spanish teardown; keep the local for clarity.
+  const language: VoiceLanguage = "en";
   const [pickedVoices, setPickedVoices] = useState<string[]>([]);
   const autoStartFiredRef = useRef(false);
 
-  // Engine is admin-controlled via FLIPAUDIO_DEFAULT_ENGINE; only override if
+  const roleLabel = (role: Character["role"]): string =>
+    role === "moderator" ? t.studio.roleLabel.moderator : t.studio.roleLabel.panelist;
+  const remixLabel = (id: RemixActionId): string => {
+    if (id === "shorter-intro") return t.studio.remixAction.shorterIntro;
+    if (id === "more-contrast") return t.studio.remixAction.moreContrast;
+    if (id === "softer-tone") return t.studio.remixAction.softerTone;
+    return t.studio.remixAction.strongerEnding;
+  };
+
+  // Engine is admin-controlled via FLIPCAST_DEFAULT_ENGINE; only override if
   // the URL explicitly carried an engine (e.g. persisted across a signup
   // redirect). No user-facing toggle.
   const voiceEngine: VoiceEngine = initialEngine ?? defaultEngine;
@@ -163,6 +143,12 @@ export function StudioClient({
     index: number;
   }>({ stage: "idle", index: 0 });
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Admin-only voiceless mode: skip Fish synthesis end-to-end so prompt
+  // tuning iterates fast. Toggle is hidden for non-admins; the API also
+  // gates this so a tampered client can't enable it.
+  const [transcriptOnly, setTranscriptOnly] = useState(false);
+  const [voicelessRun, setVoicelessRun] = useState(false);
 
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
@@ -220,8 +206,12 @@ export function StudioClient({
           }
         }
         if (evt.event === "complete") es.close();
+        if (evt.event === "synth_retry") {
+          // Audio engine had a hiccup; worker is retrying. Toast auto-dismisses.
+          setToast(evt.message ?? t.studio.errors.submitFailed);
+        }
         if (evt.event === "moderation_rejected" || evt.event === "failed") {
-          setError(evt.message ?? "Request failed.");
+          setError(evt.message ?? t.studio.errors.submitFailed);
           es.close();
         }
       } catch {
@@ -233,7 +223,8 @@ export function StudioClient({
   }, [requestId]);
 
   function srcForItem(item: SequenceItem): string | null {
-    if (item.kind === "station_intro") return "/station/intro.mp3";
+    if (item.kind === "station_intro")
+      return stationIntroUrl("en", pickedVoices);
     if (item.kind === "ad") {
       if (adRotation && adRotation.length > 0) {
         return adRotation[item.adIndex % adRotation.length] ?? null;
@@ -257,23 +248,29 @@ export function StudioClient({
 
   async function submit() {
     if (!topic || topic.trim().length < 3) {
-      setError("Give us a topic with at least a few words.");
+      setError(t.studio.errors.topicTooShort);
       return;
     }
     if (pickedVoices.length !== cfg.castSize) {
+      const fmtLabel = t.formats[format].label;
+      const tmpl =
+        cfg.castSize === 1
+          ? t.studio.errors.pickVoicesOne
+          : t.studio.errors.pickVoicesMany;
       setError(
-        `Pick ${cfg.castSize} voice${cfg.castSize > 1 ? "s" : ""} for the ${cfg.label} format.`,
+        tmpl
+          .replace("{n}", String(cfg.castSize))
+          .replace("{format}", fmtLabel),
       );
       return;
     }
-    // Gate first generation behind signup. Preserve topic/format/vibe/engine
-    // so the user lands back in Studio with their work intact, and set
-    // auto=1 so the next page load fires Generate automatically.
+    // Gate first generation behind signup. Preserve topic/format/engine so
+    // the user lands back in Studio with their work intact, and set auto=1
+    // so the next page load fires Generate automatically.
     if (!sessionUser) {
       const params = new URLSearchParams({
         topic: topic.trim(),
         format,
-        vibe,
         engine: voiceEngine,
         auto: "1",
       });
@@ -293,17 +290,19 @@ export function StudioClient({
     setSceneTurns({});
     setAdRotation(null);
     setPlan(null);
+    setVoicelessRun(false);
     setPlayback({ stage: "idle", index: 0 });
     setModalOpen(false);
-    // Fire ad rotation fetch in parallel so the URLs are ready by the time
-    // the player hits its first ad slot.
-    void fetch("/api/ads/rotation?count=5", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const list = d?.ads as { url: string }[] | undefined;
-        if (Array.isArray(list)) setAdRotation(list.map((a) => a.url));
-      })
-      .catch(() => void 0);
+    // Skip the ad rotation prefetch in voiceless mode — there's no player.
+    if (!transcriptOnly) {
+      void fetch("/api/ads/rotation?count=5", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          const list = d?.ads as { url: string }[] | undefined;
+          if (Array.isArray(list)) setAdRotation(list.map((a) => a.url));
+        })
+        .catch(() => void 0);
+    }
     try {
       const res = await fetch("/api/flipcasts", {
         method: "POST",
@@ -311,21 +310,34 @@ export function StudioClient({
         body: JSON.stringify({
           topic,
           format,
-          vibe,
+          locale: "en",
           lengthMinutes,
           engine: voiceEngine,
           voiceIds: pickedVoices,
+          // Server gates this to admins; sending it from a non-admin client
+          // is silently coerced to false on the server.
+          transcriptOnly: sessionUser?.isAdmin ? transcriptOnly : false,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error ?? "Submission failed.");
+        setError(data?.error ?? t.studio.errors.submitFailed);
         return;
       }
       setRequestId(data.requestId);
       if (data.sequence) setPlan(data.sequence as SequencePlan);
-      setPlayback({ stage: "playing", index: 0 });
-      setModalOpen(true);
+      // The server confirms whether transcript-only mode actually applied
+      // (admin check). Mirror that into local state.
+      const serverVoiceless = Boolean(data.transcriptOnly);
+      setVoicelessRun(serverVoiceless);
+      if (serverVoiceless) {
+        // No audio to play — leave the modal closed; the inline transcript
+        // section renders as the welcome + scenes stream in.
+        setPlayback({ stage: "idle", index: 0 });
+      } else {
+        setPlayback({ stage: "playing", index: 0 });
+        setModalOpen(true);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -440,29 +452,9 @@ export function StudioClient({
 
   const characterByRole = new Map(characters?.map((c) => [c.role, c]) ?? []);
 
-  function handleShare() {
-    if (typeof window === "undefined") return;
-    const url = window.location.href;
-    navigator.clipboard?.writeText(url).then(
-      () => setToast("Link copied"),
-      () => setToast("Couldn't copy"),
-    );
-  }
-
-  function handleSaveDraft() {
-    if (typeof window === "undefined") return;
-    const draft = { topic, format, vibe };
-    try {
-      window.localStorage.setItem("flipcast:draft", JSON.stringify(draft));
-      setToast("Draft saved");
-    } catch {
-      setToast("Couldn't save draft");
-    }
-  }
-
-  function handleRemix(id: string) {
-    const label = REMIX_ACTIONS.find((r) => r.id === id)?.label ?? "Remix";
-    setToast(`${label} — saved for next generation`);
+  function handleRemix(id: RemixActionId) {
+    const label = remixLabel(id);
+    setToast(t.studio.remixSavedToast.replace("{label}", label));
   }
 
   const estMinutes = plan
@@ -478,14 +470,14 @@ export function StudioClient({
             href="/"
             className="inline-flex h-10 items-center gap-2 rounded-full bg-white/70 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
           >
-            <span aria-hidden>←</span> Home
+            <span aria-hidden>←</span> {t.studio.backHome}
           </Link>
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-ink-900">
-              flip.audio Studio
+              {t.studio.title}
             </h1>
             <p className="text-xs text-ink-400">
-              Topic → format → vibe → listen.
+              {t.studio.tagline}
             </p>
           </div>
         </div>
@@ -496,23 +488,9 @@ export function StudioClient({
               href="/library"
               className="inline-flex h-10 items-center rounded-full bg-white/70 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
             >
-              My library
+              {t.studio.myLibrary}
             </Link>
           )}
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="h-10 rounded-full bg-white/70 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
-          >
-            Save draft
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="h-10 rounded-full bg-white/70 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
-          >
-            Share
-          </button>
           <UserChip user={sessionUser} loginNext="/studio" />
         </div>
       </header>
@@ -528,10 +506,10 @@ export function StudioClient({
             <div className="mb-3 flex items-end justify-between">
               <div>
                 <h3 className="text-lg font-semibold tracking-tight text-ink-900">
-                  Format
+                  {t.studio.formatHeader}
                 </h3>
                 <p className="text-sm text-ink-500">
-                  Pick the shape of the show.
+                  {t.studio.formatHelp}
                 </p>
               </div>
             </div>
@@ -539,13 +517,19 @@ export function StudioClient({
               {UI_FORMATS.map((f) => {
                 const accent = FORMAT_ACCENTS[f.accent];
                 const selected = !f.disabled && format === f.id;
+                const fmtDict = t.formats[f.id as FlipcastFormat];
                 return (
                   <button
                     key={f.id}
                     type="button"
                     onClick={() => {
                       if (f.disabled) {
-                        setToast(`${f.label} is coming soon`);
+                        setToast(
+                          t.studio.formatComingSoonToast.replace(
+                            "{label}",
+                            fmtDict.label,
+                          ),
+                        );
                         return;
                       }
                       setFormat(f.id as FlipcastFormat);
@@ -562,11 +546,11 @@ export function StudioClient({
                     />
                     <div className="mb-1 flex items-center gap-2">
                       <span className="text-base font-semibold text-ink-900">
-                        {f.label}
+                        {fmtDict.label}
                       </span>
                       {f.disabled && (
                         <span className="chip chip-mint text-[10px]">
-                          Coming soon
+                          {t.studio.comingSoon}
                         </span>
                       )}
                       {selected && (
@@ -589,7 +573,7 @@ export function StudioClient({
                       )}
                     </div>
                     <div className="text-sm leading-snug text-ink-500">
-                      {f.description}
+                      {fmtDict.description}
                     </div>
                   </button>
                 );
@@ -597,130 +581,104 @@ export function StudioClient({
             </div>
           </section>
 
-          {/* Voices + language. User picks `castSize` voices in the chosen
-              language; format determines how many (Anchor 1, Pals 2, Panel 3). */}
+          {/* Voices. Voice language follows the app locale; no in-studio picker. */}
           <section>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h3 className="text-lg font-semibold tracking-tight text-ink-900">
-                  Voices
+                  {t.studio.voicesHeader}
                 </h3>
-                <p className="text-sm text-ink-500">
-                  Pick {cfg.castSize} voice{cfg.castSize > 1 ? "s" : ""} for
-                  this {cfg.label} cast.
-                </p>
               </div>
-              <span
-                className={`chip ${
-                  pickedVoices.length === cfg.castSize
-                    ? "chip-mint"
-                    : "chip-slate"
-                }`}
-              >
-                {pickedVoices.length} / {cfg.castSize} picked
-              </span>
             </div>
 
-            {/* Language tabs */}
-            <div className="mb-3 flex flex-wrap gap-2">
-              {LANGUAGES.map((lang) => {
-                const active = language === lang.id;
-                return (
-                  <button
-                    key={lang.id}
-                    type="button"
-                    onClick={() => setLanguage(lang.id)}
-                    className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-medium transition ${
-                      active
-                        ? "bg-brand-gradient text-white shadow-card"
-                        : "bg-white/85 text-ink-700 ring-1 ring-slate-200 hover:bg-white"
-                    }`}
-                  >
-                    <span aria-hidden>{lang.emoji}</span>
-                    {lang.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Voice cards */}
-            {availableVoices.length === 0 ? (
-              <div className="rounded-3xl bg-white/60 p-6 text-sm text-ink-500 ring-1 ring-slate-200/70">
-                {language === "es"
-                  ? "Spanish voices are coming soon. Pick English for now."
-                  : "No voices available for this language yet."}
-              </div>
+            {/* Solo: pick one voice individually. Pals/Panel: pick a curated
+                group so chemistry is intentional rather than DIY. */}
+            {format === "newscast" ? (
+              availableVoices.length === 0 ? (
+                <div className="rounded-3xl bg-white/60 p-6 text-sm text-ink-500 ring-1 ring-slate-200/70">
+                  {t.studio.voicesEmpty}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                  {availableVoices.map((v) => {
+                    const selected = pickedVoices.includes(v.id);
+                    const atCap =
+                      !selected && pickedVoices.length >= cfg.castSize;
+                    return (
+                      <VoicePickCard
+                        key={v.id}
+                        voice={v}
+                        selected={selected}
+                        disabled={atCap}
+                        onToggle={() => {
+                          setPickedVoices((prev) =>
+                            prev.includes(v.id)
+                              ? prev.filter((x) => x !== v.id)
+                              : [...prev, v.id],
+                          );
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              )
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                {availableVoices.map((v) => {
-                  const selected = pickedVoices.includes(v.id);
-                  const atCap =
-                    !selected && pickedVoices.length >= cfg.castSize;
+              (() => {
+                const groups = voiceGroupsFor(
+                  format as "pals" | "panel",
+                  language,
+                );
+                if (groups.length === 0) {
                   return (
-                    <VoicePickCard
-                      key={v.id}
-                      voice={v}
-                      selected={selected}
-                      disabled={atCap}
-                      onToggle={() => {
-                        setPickedVoices((prev) =>
-                          prev.includes(v.id)
-                            ? prev.filter((x) => x !== v.id)
-                            : [...prev, v.id],
-                        );
-                      }}
-                    />
+                    <div className="rounded-3xl bg-white/60 p-6 text-sm text-ink-500 ring-1 ring-slate-200/70">
+                      {t.studio.voicesEmpty}
+                    </div>
                   );
-                })}
-              </div>
+                }
+                return (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    {groups.map((g) => {
+                      const selected =
+                        pickedVoices.length === g.voiceIds.length &&
+                        g.voiceIds.every((id) => pickedVoices.includes(id));
+                      return (
+                        <VoiceGroupCard
+                          key={g.id}
+                          group={g}
+                          selected={selected}
+                          onSelect={() => setPickedVoices([...g.voiceIds])}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })()
             )}
           </section>
 
-          {/* Vibe */}
-          <section>
-            <div className="mb-3">
-              <h3 className="text-lg font-semibold tracking-tight text-ink-900">
-                Vibe
-              </h3>
-              <p className="text-sm text-ink-500">
-                Sets the energy and word choice.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {AVAILABLE_VIBES.map((v) => {
-                const accent = VIBE_ACCENTS[v.id] ?? VIBE_ACCENTS.serious;
-                const selected = vibe === v.id;
-                return (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setVibe(v.id)}
-                    className={`rounded-3xl bg-white/80 p-4 text-left ring-1 transition ${
-                      selected
-                        ? `${accent.ring} ring-2 ${accent.bg} shadow-cardHover`
-                        : "ring-slate-200 hover:ring-2 hover:shadow-card"
-                    }`}
-                  >
-                    <div className="mb-1 flex items-center justify-between">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent.chip}`}
-                      >
-                        {v.label}
-                      </span>
-                      {selected && (
-                        <span className="text-[11px] font-semibold text-ink-500">
-                          chosen
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm leading-snug text-ink-500">
-                      {v.description}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
+          {/* Vibe was here — removed. The model picks tone from the topic. */}
+
+          {/* Admin-only voiceless mode toggle. Skips Fish synthesis end-to-end
+              so the prompt stack can be iterated on without waiting for
+              audio. The transcript section below renders as scenes stream in. */}
+          {sessionUser?.isAdmin && (
+            <label className="flex items-center justify-between gap-3 rounded-2xl bg-amber-50/70 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+              <span className="flex items-center gap-2">
+                <span className="chip chip-pink text-[10px]">admin</span>
+                <span className="font-medium">Transcript only</span>
+                <span className="text-xs text-amber-700">
+                  Skip Fish — generate text only. Fast iteration for prompt tuning.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={transcriptOnly}
+                onChange={(e) => setTranscriptOnly(e.target.checked)}
+                disabled={hasStarted}
+                className="h-4 w-4 accent-pink-600"
+              />
+            </label>
+          )}
 
           {/* Generate CTA */}
           <button
@@ -736,10 +694,12 @@ export function StudioClient({
             className="w-full rounded-full bg-brand-gradient px-6 py-4 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting
-              ? "Starting up…"
+              ? t.studio.starting
               : hasStarted
-                ? "Generating…"
-                : "Generate flip.audio"}
+                ? t.studio.generating
+                : transcriptOnly && sessionUser?.isAdmin
+                  ? "Generate transcript"
+                  : t.studio.generate}
           </button>
 
           {/* Error */}
@@ -757,7 +717,7 @@ export function StudioClient({
               className="glass inline-flex items-center gap-2 self-start rounded-full px-5 py-2.5 text-sm font-semibold text-ink-900 shadow-card transition hover:shadow-cardHover"
             >
               <span className="inline-flex h-2 w-2 rounded-full bg-pink-400 animate-pulse-soft" />
-              Reopen player
+              {t.studio.reopenPlayer}
             </button>
           )}
 
@@ -767,80 +727,61 @@ export function StudioClient({
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-ink-900">
-                    Remix
+                    {t.studio.remixHeader}
                   </h3>
                   <p className="text-xs text-ink-400">
-                    Quick one-tap tweaks for the next generation.
+                    {t.studio.remixHelp}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
                     resetSession();
-                    setToast("Ready for a fresh take");
+                    setToast(t.studio.startOverToast);
                   }}
                   className="h-9 rounded-full bg-white/80 px-4 text-xs font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
                 >
-                  Start over
+                  {t.studio.startOver}
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {REMIX_ACTIONS.map((r) => (
+                {REMIX_ACTION_IDS.map((id) => (
                   <button
-                    key={r.id}
+                    key={id}
                     type="button"
-                    onClick={() => handleRemix(r.id)}
+                    onClick={() => handleRemix(id)}
                     className="rounded-full bg-white/80 px-4 py-2 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white hover:shadow-card"
                   >
-                    {r.label}
+                    {remixLabel(id)}
                   </button>
                 ))}
               </div>
             </section>
           )}
 
-          {/* Supporting explanation */}
-          {!hasStarted && (
-            <section className="rounded-3xl bg-white/50 p-6 ring-1 ring-slate-200/60">
-              <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-ink-500">
-                How this works
-              </h3>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-                {[
-                  {
-                    label: "Topic first",
-                    body: "Start with what you actually want to hear about.",
-                    chip: "sky",
-                  },
-                  {
-                    label: "Tap the shape",
-                    body: "Format and vibe are single taps, not menus.",
-                    chip: "pink",
-                  },
-                  {
-                    label: "See the preview",
-                    body: "The outline and metadata tell you what you're making.",
-                    chip: "mint",
-                  },
-                  {
-                    label: "Remix, don't restart",
-                    body: "Quick tweaks after generation beat starting over.",
-                    chip: "slate",
-                  },
-                ].map((s) => (
-                  <div
-                    key={s.label}
-                    className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70"
-                  >
-                    <span className={`chip chip-${s.chip} mb-2`}>
-                      {s.label}
-                    </span>
-                    <p className="text-sm leading-snug text-ink-500">
-                      {s.body}
-                    </p>
-                  </div>
-                ))}
+          {/* Voiceless-mode banner + welcome card. Replaces the audio player
+              when an admin runs in transcript-only mode. */}
+          {voicelessRun && hasStarted && (
+            <section className="rounded-3xl bg-amber-50/80 p-5 ring-1 ring-amber-200">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="chip chip-pink text-[10px]">admin</span>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-800">
+                  Transcript-only run
+                </h3>
               </div>
+              <p className="text-sm text-amber-900/80">
+                Fish synthesis skipped. Cast, welcome, scenes, and validator all run; transcript renders below as scenes stream in.
+              </p>
+              {welcomeText && (
+                <div className="mt-4 rounded-2xl bg-white/80 p-4 ring-1 ring-amber-100">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-pink-600">
+                    Welcome
+                  </div>
+                  <p className="text-sm leading-relaxed text-ink-700">
+                    {welcomeText}
+                  </p>
+                </div>
+              )}
             </section>
           )}
 
@@ -848,7 +789,7 @@ export function StudioClient({
           {characters && characters.length > 0 && (
             <section>
               <h3 className="mb-3 text-lg font-semibold tracking-tight text-ink-900">
-                Cast
+                {t.studio.castHeader}
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 {characters.map((c) => (
@@ -857,13 +798,13 @@ export function StudioClient({
                     className="glass rounded-3xl p-5 shadow-card"
                   >
                     <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-pink-600">
-                      {ROLE_LABEL[c.role]}
+                      {roleLabel(c.role)}
                     </div>
                     <div className="text-lg font-semibold text-ink-900">
                       {c.name}
                     </div>
                     <div className="mb-2 text-xs text-ink-400">
-                      Voice: {c.voiceLabel}
+                      {t.studio.voicePrefix}: {c.voiceLabel}
                     </div>
                     {c.bio && (
                       <div className="mb-2 text-xs italic text-ink-500">
@@ -884,7 +825,7 @@ export function StudioClient({
             <section>
               <div className="mb-3 flex items-center gap-2">
                 <h3 className="text-lg font-semibold tracking-tight text-ink-900">
-                  Transcript
+                  {t.studio.transcriptHeader}
                 </h3>
                 <span className="chip chip-pink">admin</span>
               </div>
@@ -895,7 +836,7 @@ export function StudioClient({
                   .map((idx) => (
                     <div key={idx}>
                       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-600">
-                        Scene {idx}
+                        {t.studio.sceneLabel} {idx}
                       </div>
                       <div className="flex flex-col gap-2.5">
                         {sceneTurns[idx]!.map((t) => {
@@ -1001,6 +942,11 @@ export function StudioClient({
               </div>
             </details>
           )}
+
+          {/* Admin-only test panel: pick completed flipcasts and combine their
+              existing transcripts into one document. No re-runs — pure SELECT
+              from the DB and merge client-side. */}
+          {sessionUser?.isAdmin && <AdminTestPanel />}
         </div>
 
         {/* Right column */}
@@ -1138,6 +1084,106 @@ function VoicePickCard({
         src={`/voice-samples/${voice.id}.mp3`}
         preload="none"
         onEnded={() => setPlaying(false)}
+      />
+    </div>
+  );
+}
+
+// Card for a curated voice combo (Pals duo or Panel trio). One play button
+// previews the whole combo's chemistry from a static MP3; absence of the
+// recording is handled silently so groups can ship before their previews are
+// produced. Selecting the card sets pickedVoices to the group's voiceIds in
+// order, so the worker pipeline gets the same shape it always did.
+function VoiceGroupCard({
+  group,
+  selected,
+  onSelect,
+}: {
+  group: VoiceGroup;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [previewUnavailable, setPreviewUnavailable] = useState(false);
+
+  function togglePreview(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const a = audioRef.current;
+    if (!a) return;
+    if (playing) {
+      a.pause();
+      a.currentTime = 0;
+      setPlaying(false);
+    } else {
+      a.play().then(
+        () => setPlaying(true),
+        () => setPlaying(false),
+      );
+    }
+  }
+
+  // Names of the constituent voices (resolved client-side via the catalog).
+  const voiceNames = group.voiceIds
+    .map((id) => VOICES.find((v) => v.id === id)?.label ?? id)
+    .join(" · ");
+
+  return (
+    <div
+      onClick={onSelect}
+      role="button"
+      aria-pressed={selected}
+      className={`cursor-pointer rounded-3xl bg-white/85 p-4 ring-1 transition ${
+        selected
+          ? "ring-2 ring-sky-400 shadow-cardHover"
+          : "ring-slate-200 hover:ring-sky-200 hover:shadow-card"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-base font-semibold text-ink-900">
+            {group.label}
+          </div>
+          {group.description && (
+            <div className="mt-1 text-xs text-ink-500">{group.description}</div>
+          )}
+          <div className="mt-2 text-[11px] uppercase tracking-[0.1em] text-ink-400">
+            {voiceNames}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={togglePreview}
+          disabled={previewUnavailable}
+          aria-label={playing ? "Stop preview" : "Play preview"}
+          className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-white shadow-card transition active:scale-95 ${
+            previewUnavailable
+              ? "cursor-not-allowed bg-slate-300"
+              : "bg-brand-gradient"
+          }`}
+        >
+          {playing ? (
+            <svg width="12" height="12" viewBox="0 0 24 24">
+              <rect x="6" y="5" width="4" height="14" rx="1" fill="white" />
+              <rect x="14" y="5" width="4" height="14" rx="1" fill="white" />
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 24 24">
+              <path d="M7 5v14l12-7-12-7z" fill="white" />
+            </svg>
+          )}
+        </button>
+      </div>
+      <audio
+        ref={audioRef}
+        src={group.previewUrl}
+        preload="none"
+        onEnded={() => setPlaying(false)}
+        onError={() => {
+          setPlaying(false);
+          setPreviewUnavailable(true);
+        }}
       />
     </div>
   );

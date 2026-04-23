@@ -4,6 +4,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { SignupForm } from "@/components/auth/signup-form";
 import { getSession } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { getDictionary } from "@/lib/i18n/server";
 
 interface Props {
   searchParams?: { next?: string };
@@ -17,20 +18,21 @@ export default async function SignupPage({ searchParams }: Props) {
   const googleEnabled = Boolean(
     env.googleClientId && env.googleClientSecret,
   );
+  const t = getDictionary();
   return (
     <AuthShell
-      title="Make the shows you want to hear."
-      subtitle="Your library, saved and ready whenever you are."
+      title={t.auth.signup.title}
+      subtitle={t.auth.signup.subtitle}
       footer={
         <span>
-          Already have an account?{" "}
+          {t.auth.signup.alreadyAccount}{" "}
           <Link
             href={`/login${
               searchParams?.next ? `?next=${encodeURIComponent(searchParams.next)}` : ""
             }`}
             className="font-semibold text-ink-900 underline decoration-sky-300 underline-offset-4 hover:text-sky-600"
           >
-            Log in
+            {t.auth.signup.login}
           </Link>
           .
         </span>

@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   googleEnabled: boolean;
@@ -12,6 +13,7 @@ export function LoginForm({ googleEnabled }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? "/library";
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function LoginForm({ googleEnabled }: Props) {
         redirect: false,
       });
       if (!res || res.error) {
-        setError("Email or password didn't match.");
+        setError(t.auth.login.error);
         return;
       }
       router.push(next);
@@ -57,11 +59,11 @@ export function LoginForm({ googleEnabled }: Props) {
                 d="M12 10.2v3.9h5.5c-.2 1.4-1.6 4-5.5 4-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.9 1.5l2.6-2.6C16.9 3.4 14.7 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12S6.8 21.5 12 21.5c6.9 0 9.5-4.8 9.5-7.3 0-.5 0-.9-.1-1.3H12z"
               />
             </svg>
-            Continue with Google
+            {t.auth.continueWithGoogle}
           </button>
           <div className="flex items-center gap-3 text-xs text-ink-400">
             <div className="h-px flex-1 bg-slate-200" />
-            <span>or</span>
+            <span>{t.auth.or}</span>
             <div className="h-px flex-1 bg-slate-200" />
           </div>
         </>
@@ -70,7 +72,7 @@ export function LoginForm({ googleEnabled }: Props) {
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-            Email
+            {t.auth.emailLabel}
           </span>
           <input
             type="email"
@@ -83,7 +85,7 @@ export function LoginForm({ googleEnabled }: Props) {
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-            Password
+            {t.auth.passwordLabel}
           </span>
           <input
             type="password"
@@ -105,7 +107,7 @@ export function LoginForm({ googleEnabled }: Props) {
           disabled={submitting}
           className="inline-flex h-12 items-center justify-center rounded-full bg-brand-gradient px-6 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] disabled:opacity-60"
         >
-          {submitting ? "Logging in…" : "Log in"}
+          {submitting ? t.auth.login.submitting : t.auth.login.submit}
         </button>
       </form>
     </div>

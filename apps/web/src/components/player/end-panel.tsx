@@ -6,6 +6,7 @@ import {
   embedSnippet,
   playerUrl,
 } from "@/lib/share";
+import { useT } from "@/lib/i18n/client";
 
 type Phase = "rate" | "share" | "thanks";
 
@@ -19,7 +20,7 @@ interface Props {
   variant?: "inline" | "overlay";
 }
 
-const FEEDBACK_KEY = (rid: string) => `flipaudio:feedback:${rid}`;
+const FEEDBACK_KEY = (rid: string) => `flipcast:feedback:${rid}`;
 
 function readPriorVote(rid: string): "up" | "down" | null {
   try {
@@ -51,6 +52,7 @@ export function EndPanel({
   onDismiss,
   variant = "inline",
 }: Props) {
+  const t = useT();
   const [phase, setPhase] = useState<Phase>(() => {
     if (typeof window === "undefined") return "rate";
     const prior = readPriorVote(requestId);
@@ -76,8 +78,8 @@ export function EndPanel({
     if (typeof navigator === "undefined" || !("share" in navigator)) return;
     navigator
       .share({
-        title: `flip.audio — ${topic}`,
-        text: `Listen to "${topic}" on flip.audio`,
+        title: t.endPanel.nativeShareTitle.replace("{topic}", topic),
+        text: t.endPanel.nativeShareText.replace("{topic}", topic),
         url: shareUrl,
       })
       .catch(() => void 0);
@@ -104,10 +106,10 @@ export function EndPanel({
       {phase === "rate" && (
         <div>
           <h3 className="text-base font-semibold text-ink-900">
-            Did you like it?
+            {t.endPanel.rateTitle}
           </h3>
           <p className="mt-1 text-xs text-ink-500">
-            We use this to make the next one better.
+            {t.endPanel.rateSubtitle}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
@@ -115,14 +117,14 @@ export function EndPanel({
               onClick={() => vote("up")}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-brand-gradient px-5 text-sm font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              <span aria-hidden>👍</span> Loved it
+              <span aria-hidden>👍</span> {t.endPanel.loved}
             </button>
             <button
               type="button"
               onClick={() => vote("down")}
               className="inline-flex h-11 items-center gap-2 rounded-full bg-white/85 px-5 text-sm font-semibold text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
             >
-              <span aria-hidden>👎</span> Not for me
+              <span aria-hidden>👎</span> {t.endPanel.notForMe}
             </button>
             {onDismiss && (
               <button
@@ -130,7 +132,7 @@ export function EndPanel({
                 onClick={onDismiss}
                 className="ml-auto text-xs font-medium text-ink-400 hover:text-ink-700"
               >
-                Skip
+                {t.endPanel.skip}
               </button>
             )}
           </div>
@@ -142,17 +144,17 @@ export function EndPanel({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold text-ink-900">
-                Share it.
+                {t.endPanel.shareTitle}
               </h3>
               <p className="mt-1 text-xs text-ink-500">
-                Send the player link — anyone can listen, no signup needed.
+                {t.endPanel.shareSubtitle}
               </p>
             </div>
             {onDismiss && (
               <button
                 type="button"
                 onClick={onDismiss}
-                aria-label="Close"
+                aria-label={t.endPanel.closeAria}
                 className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-ink-500 ring-1 ring-slate-200 hover:text-ink-900"
               >
                 ✕
@@ -161,17 +163,17 @@ export function EndPanel({
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {SHARE_TARGETS.map((t) => (
+            {SHARE_TARGETS.map((target) => (
               <ShareTile
-                key={t.key}
-                label={t.label}
-                accent={t.accent}
-                href={t.build(topic, shareUrl)}
+                key={target.key}
+                label={target.label}
+                accent={target.accent}
+                href={target.build(topic, shareUrl)}
               />
             ))}
             {typeof navigator !== "undefined" && "share" in navigator && (
               <ShareTile
-                label="More…"
+                label={t.endPanel.shareMore}
                 accent="bg-pink-500 text-white"
                 onClick={nativeShare}
               />
@@ -185,7 +187,7 @@ export function EndPanel({
               className="inline-flex h-10 items-center gap-2 rounded-full bg-white/85 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
             >
               <span aria-hidden>🔗</span>
-              {copied ? "Copied!" : "Copy link"}
+              {copied ? t.endPanel.copied : t.endPanel.copyLink}
             </button>
             <button
               type="button"
@@ -193,7 +195,7 @@ export function EndPanel({
               className="inline-flex h-10 items-center gap-2 rounded-full bg-white/85 px-4 text-sm font-medium text-ink-700 ring-1 ring-slate-200 transition hover:bg-white"
             >
               <span aria-hidden>{`</>`}</span>
-              {showEmbed ? "Hide embed" : "Embed"}
+              {showEmbed ? t.endPanel.hideEmbed : t.endPanel.embed}
             </button>
           </div>
 
@@ -209,13 +211,13 @@ export function EndPanel({
           )}
 
           <div className="mt-4 flex items-center gap-3 border-t border-slate-200/70 pt-3 text-xs text-ink-400">
-            <span>Glad you liked it.</span>
+            <span>{t.endPanel.gladYouLiked}</span>
             <button
               type="button"
               onClick={() => setPhase("rate")}
               className="ml-auto font-medium text-ink-500 hover:text-ink-700"
             >
-              Change vote
+              {t.endPanel.changeVote}
             </button>
           </div>
         </div>
@@ -224,10 +226,10 @@ export function EndPanel({
       {phase === "thanks" && (
         <div>
           <h3 className="text-base font-semibold text-ink-900">
-            Thanks for the feedback.
+            {t.endPanel.thanksTitle}
           </h3>
           <p className="mt-1 text-xs text-ink-500">
-            We'll use it to tune the next one.
+            {t.endPanel.thanksSubtitle}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
@@ -235,7 +237,7 @@ export function EndPanel({
               onClick={() => setPhase("rate")}
               className="text-xs font-medium text-ink-500 hover:text-ink-700"
             >
-              Change vote
+              {t.endPanel.changeVote}
             </button>
             {onDismiss && (
               <button
@@ -243,7 +245,7 @@ export function EndPanel({
                 onClick={onDismiss}
                 className="ml-auto inline-flex h-10 items-center rounded-full bg-ink-900 px-5 text-sm font-semibold text-white transition hover:scale-[1.02]"
               >
-                Done
+                {t.endPanel.done}
               </button>
             )}
           </div>

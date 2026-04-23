@@ -1,4 +1,4 @@
-import { VIBE_IDS, type FlipcastFormat, type FlipcastVibe } from "@flipaudio/types";
+import { type FlipcastFormat } from "@flipcast/types";
 import { StudioClient } from "@/components/studio/studio-client";
 import { getSession } from "@/lib/auth";
 import { env } from "@/lib/env";
@@ -8,7 +8,6 @@ interface StudioPageProps {
   searchParams?: {
     topic?: string;
     format?: string;
-    vibe?: string;
     engine?: string;
     auto?: string;
   };
@@ -23,10 +22,6 @@ export default async function StudioPage({ searchParams }: StudioPageProps) {
   const initialFormat =
     searchParams?.format && VALID_FORMATS.includes(searchParams.format as FlipcastFormat)
       ? (searchParams.format as FlipcastFormat)
-      : undefined;
-  const initialVibe =
-    searchParams?.vibe && (VIBE_IDS as readonly string[]).includes(searchParams.vibe)
-      ? (searchParams.vibe as FlipcastVibe)
       : undefined;
   const initialEngine =
     searchParams?.engine &&
@@ -47,11 +42,9 @@ export default async function StudioPage({ searchParams }: StudioPageProps) {
     : null;
   return (
     <StudioClient
-      defaultSpeed={env.defaultSpeed}
       defaultEngine={env.defaultEngine}
       initialTopic={initialTopic}
       initialFormat={initialFormat}
-      initialVibe={initialVibe}
       initialEngine={initialEngine}
       autoStart={autoStart}
       sessionUser={sessionUser}

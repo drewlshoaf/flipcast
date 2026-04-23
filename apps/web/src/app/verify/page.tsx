@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { VerifyForm } from "@/components/auth/verify-form";
 import { getSession } from "@/lib/auth";
+import { getDictionary } from "@/lib/i18n/server";
 
 interface Props {
   searchParams?: { email?: string; next?: string };
@@ -15,23 +16,24 @@ export default async function VerifyPage({ searchParams }: Props) {
   }
   const email = searchParams?.email ?? "";
   const next = searchParams?.next ?? "/library";
+  const t = getDictionary();
+
+  const subtitle = email
+    ? t.auth.verify.subtitleWithEmail.replace("{email}", email)
+    : t.auth.verify.subtitleNoEmail;
 
   return (
     <AuthShell
-      title="One last step."
-      subtitle={
-        email
-          ? `We sent a 6-digit code to ${email}. Enter it below to verify.`
-          : "Enter the 6-digit code we sent to your email."
-      }
+      title={t.auth.verify.title}
+      subtitle={subtitle}
       footer={
         <span>
-          Wrong email?{" "}
+          {t.auth.verify.wrongEmail}{" "}
           <Link
             href={`/signup${next ? `?next=${encodeURIComponent(next)}` : ""}`}
             className="font-semibold text-ink-900 underline decoration-sky-300 underline-offset-4 hover:text-sky-600"
           >
-            Start over
+            {t.auth.verify.startOver}
           </Link>
           .
         </span>

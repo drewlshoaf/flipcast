@@ -8,12 +8,12 @@ import {
   VOICE_BY_ID,
   type FlipcastFormat,
   type TtsEngine,
-} from "@flipaudio/types";
+} from "@flipcast/types";
 import {
   flipcastRequests,
   moderationDecisions,
-} from "@flipaudio/server-db";
-import { publishSseEvent, createRedisPublisher } from "@flipaudio/queue";
+} from "@flipcast/server-db";
+import { publishSseEvent, createRedisPublisher } from "@flipcast/queue";
 import { db } from "@/lib/db";
 import { flipcastQueue } from "@/lib/queue";
 import { env } from "@/lib/env";
@@ -74,10 +74,15 @@ export async function POST(req: Request) {
   const userId = session?.user?.id ?? null;
   if (!userId) {
     return NextResponse.json(
-      { error: "Sign in to create a flip.audio." },
+      { error: "Sign in to create a flipcast." },
       { status: 401 },
     );
   }
+
+  // Admin-only fast-iteration mode. Silently coerce to false for non-admins
+  // so a tampered client can't skip synthesis.
+  const transcriptOnly =
+    Boolean(input.transcriptOnly) && Boolean(session?.user?.isAdmin);
 
   const [request] = await db
     .insert(flipcastRequests)
@@ -88,7 +93,8 @@ export async function POST(req: Request) {
       requestedDurationSecondsTarget: targetSeconds,
       engine,
       format,
-      vibe: input.vibe,
+      vibe: null,
+      locale: input.locale ?? "en",
       speed: input.speed ?? null,
       status: "validating",
     })
@@ -177,7 +183,7 @@ export async function POST(req: Request) {
 
     await flipcastQueue.add(
       "process",
-      { requestId: request.id },
+      { requestId: request.id, transcriptOnly },
       { jobId: request.id, removeOnComplete: true, attempts: 3 },
     );
 
@@ -194,6 +200,7 @@ export async function POST(req: Request) {
       format,
       engine,
       sequence,
+      transcriptOnly,
     });
   } finally {
     pub.disconnect();

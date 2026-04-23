@@ -9,10 +9,12 @@ import {
   type SequencePlan,
   type SpeakerRole,
   type TranscriptTurn,
-} from "@flipaudio/types";
+} from "@flipcast/types";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
 import { EndPanel } from "@/components/player/end-panel";
 import { PlayerActions } from "@/components/player/player-actions";
+import { useT } from "@/lib/i18n/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type Stage = "idle" | "playing" | "waiting" | "finished";
 
@@ -95,6 +97,7 @@ const AD_GRADIENTS: Record<AdAccent, { bg: string; chip: string; pill: string }>
 };
 
 export function EpisodeModal(props: EpisodeModalProps) {
+  const t = useT();
   const {
     open,
     onClose,
@@ -247,7 +250,11 @@ export function EpisodeModal(props: EpisodeModalProps) {
                 aria-hidden
               />
               <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                {isFinished ? "Done" : isWaiting ? "Generating" : "Playing"}
+                {isFinished
+                  ? t.player.statusDone
+                  : isWaiting
+                    ? t.player.statusGenerating
+                    : t.player.statusPlaying}
               </span>
               {adminView && plan && (
                 <span className="ml-auto font-mono text-xs text-ink-400">
@@ -275,7 +282,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
               type="button"
               onClick={togglePause}
               disabled={!currentSrc}
-              aria-label={paused ? "Play" : "Pause"}
+              aria-label={paused ? t.player.playAria : t.player.pauseAria}
               className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-gradient text-white shadow-glow transition hover:scale-[1.04] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {paused ? (
@@ -316,7 +323,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
                     <path d="M5 5v14l9-7-9-7z" fill="currentColor" />
                     <rect x="16" y="5" width="2" height="14" fill="currentColor" />
                   </svg>
-                  Skip to next scene
+                  {t.player.skipToNextScene}
                 </button>
               )}
               {canSkipToEnd && (
@@ -329,7 +336,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
                     <path d="M4 5v14l8-7-8-7z" fill="currentColor" />
                     <path d="M12 5v14l8-7-8-7z" fill="currentColor" />
                   </svg>
-                  Skip to end
+                  {t.player.skipToEnd}
                 </button>
               )}
             </div>
@@ -343,6 +350,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
             currentSpeaker={currentSpeaker}
             paused={paused}
             adRotation={adRotation}
+            t={t}
           />
 
           {/* Admin-only: full transcript with the active turn highlighted. */}
@@ -352,6 +360,7 @@ export function EpisodeModal(props: EpisodeModalProps) {
               characters={characters}
               currentItem={currentItem}
               currentSpeaker={currentSpeaker}
+              t={t}
             />
           )}
 
@@ -397,6 +406,7 @@ function NowPlaying({
   currentSpeaker,
   paused,
   adRotation,
+  t,
 }: {
   item: SequenceItem | null;
   totalAds: number;
@@ -404,6 +414,7 @@ function NowPlaying({
   currentSpeaker: SpeakerRole | null;
   paused: boolean;
   adRotation: string[] | null;
+  t: Dictionary;
 }) {
   if (item && item.kind === "ad") {
     return (
@@ -411,6 +422,7 @@ function NowPlaying({
         slotIndex={item.adIndex}
         totalAds={totalAds}
         adRotation={adRotation}
+        t={t}
       />
     );
   }
@@ -419,6 +431,7 @@ function NowPlaying({
       characters={characters}
       currentSpeaker={currentSpeaker}
       paused={paused}
+      t={t}
     />
   );
 }
@@ -427,22 +440,24 @@ function CastPanel({
   characters,
   currentSpeaker,
   paused,
+  t,
 }: {
   characters: Character[] | null;
   currentSpeaker: SpeakerRole | null;
   paused: boolean;
+  t: Dictionary;
 }) {
   if (!characters || characters.length === 0) {
     return (
       <div className="rounded-3xl bg-white/60 p-5 text-sm italic text-ink-400 ring-1 ring-slate-200/70">
-        Casting the show…
+        {t.player.castingPlaceholder}
       </div>
     );
   }
   return (
     <div>
       <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-        Cast
+        {t.player.castHeader}
       </div>
       <div className="grid grid-cols-1 gap-2">
         {characters.map((c) => {
@@ -465,7 +480,7 @@ function CastPanel({
                     c.role === "moderator" ? "text-pink-600" : "text-sky-600"
                   }`}
                 >
-                  {c.role === "moderator" ? "Moderator" : "Panelist"}
+                  {c.role === "moderator" ? t.player.moderator : t.player.panelist}
                 </span>
                 {isSpeaking ? (
                   <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-pink-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
@@ -479,7 +494,7 @@ function CastPanel({
                         <path d="M7 5v14l12-7-12-7z" fill="white" />
                       </svg>
                     </span>
-                    Speaking
+                    {t.player.speaking}
                   </span>
                 ) : (
                   <span className="ml-auto text-[11px] text-ink-400">
@@ -502,10 +517,12 @@ function AdPanel({
   slotIndex,
   totalAds,
   adRotation,
+  t,
 }: {
   slotIndex: number;
   totalAds: number;
   adRotation: string[] | null;
+  t: Dictionary;
 }) {
   // Resolve the ad that's *actually* being played at this slot so the card
   // and promo code match the audio.
@@ -517,7 +534,7 @@ function AdPanel({
     <div className={`overflow-hidden rounded-3xl ${palette.bg} p-6 text-white shadow-cardHover`}>
       <div className="mb-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.14em]">
         <span className={`rounded-full px-2.5 py-1 ${palette.chip}`}>
-          Ad break
+          {t.player.adBreak}
         </span>
         <span className="text-white/60">
           {slotIndex + 1} / {totalAds}
@@ -536,7 +553,7 @@ function AdPanel({
       <div className="text-2xl font-semibold tracking-tight">{ad.product}</div>
       <div className="mt-3 flex items-center gap-2">
         <span className="text-xs uppercase tracking-[0.14em] text-white/70">
-          Promo code
+          {t.player.promoCodeLabel}
         </span>
         <span
           className={`rounded-full px-3 py-1 font-mono text-sm font-bold tracking-wider ${palette.pill}`}
@@ -545,7 +562,7 @@ function AdPanel({
         </span>
       </div>
       <div className="mt-3 text-xs text-white/70">
-        Enter it in the box below to redeem.
+        {t.player.promoCodeHint}
       </div>
     </div>
   );
@@ -559,11 +576,13 @@ function TranscriptPanel({
   characters,
   currentItem,
   currentSpeaker,
+  t,
 }: {
   sceneTurns: Record<number, TranscriptTurn[]>;
   characters: Character[] | null;
   currentItem: SequenceItem | null;
   currentSpeaker: SpeakerRole | null;
+  t: Dictionary;
 }) {
   // All hooks must be called unconditionally before any early return, or
   // React throws "Rendered more hooks than during the previous render" when
@@ -597,7 +616,7 @@ function TranscriptPanel({
     <section className="rounded-3xl bg-white/70 p-4 ring-1 ring-slate-200/70">
       <div className="mb-2 flex items-center gap-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-          Transcript
+          {t.player.transcriptHeader}
         </h3>
         <span className="chip chip-pink text-[10px]">admin</span>
       </div>
@@ -612,7 +631,7 @@ function TranscriptPanel({
                   isActiveScene ? "text-sky-600" : "text-ink-400"
                 }`}
               >
-                Scene {idx}
+                {t.player.sceneLabel} {idx}
               </div>
               <div className="flex flex-col gap-1.5">
                 {turns.map((t) => {

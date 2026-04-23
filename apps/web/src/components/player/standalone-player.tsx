@@ -4,18 +4,20 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   planSequence,
+  stationIntroUrl,
   type SequenceItem,
   type SequencePlan,
   type SseEvent,
-} from "@flipaudio/types";
+} from "@flipcast/types";
 import { EndPanel } from "@/components/player/end-panel";
 import { PlayerActions } from "@/components/player/player-actions";
+import { useT } from "@/lib/i18n/client";
 
 interface FlipcastRow {
   id: string;
   topic: string;
   format: string;
-  vibe: string | null;
+  locale: string | null;
   status: string;
   topicContext: string | null;
   welcomeAudioUrl: string | null;
@@ -23,6 +25,9 @@ interface FlipcastRow {
   scene2AudioUrl: string | null;
   scene3AudioUrl: string | null;
   scene4AudioUrl: string | null;
+  moderatorVoiceId: string | null;
+  panelist1VoiceId: string | null;
+  panelist2VoiceId: string | null;
   errorMessage: string | null;
 }
 
@@ -35,28 +40,37 @@ function formatTime(sec: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function labelForItem(item: SequenceItem, totalAds: number): string {
-  if (item.kind === "station_intro") return "Station intro";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
+
+function labelForItem(
+  item: SequenceItem,
+  totalAds: number,
+  t: Dictionary,
+): string {
+  if (item.kind === "station_intro") return t.standalone.stationIntro;
   if (item.kind === "ad")
-    return `Ad break ${item.adIndex + 1} of ${Math.min(totalAds, 6)}`;
-  if (item.kind === "welcome") return "Welcome in";
+    return t.standalone.adBreak
+      .replace("{index}", String(item.adIndex + 1))
+      .replace("{total}", String(Math.min(totalAds, 6)));
+  if (item.kind === "welcome") return t.standalone.welcomeIn;
   if (item.kind === "scene")
     return item.isFinal
-      ? `Scene ${item.sceneIndex} — closing`
-      : `Scene ${item.sceneIndex}`;
+      ? t.standalone.sceneClosing.replace("{n}", String(item.sceneIndex))
+      : t.standalone.scene.replace("{n}", String(item.sceneIndex));
   return "";
 }
 
-function itemTypeLabel(item: SequenceItem): string {
-  if (item.kind === "station_intro") return "INTRO";
-  if (item.kind === "ad") return "AD";
-  if (item.kind === "welcome") return "WELCOME";
-  if (item.kind === "scene") return item.isFinal ? "CLOSING" : "SCENE";
+function itemTypeLabel(item: SequenceItem, t: Dictionary): string {
+  if (item.kind === "station_intro") return t.standalone.typeIntro;
+  if (item.kind === "ad") return t.standalone.typeAd;
+  if (item.kind === "welcome") return t.standalone.typeWelcome;
+  if (item.kind === "scene")
+    return item.isFinal ? t.standalone.typeClosing : t.standalone.typeScene;
   return "";
 }
 
 const FORMAT_LABEL: Record<string, string> = {
-  newscast: "Anchor",
+  newscast: "Solo",
   pals: "Pals",
   panel: "Panel",
 };
@@ -78,6 +92,7 @@ interface TranscriptCharacter {
 }
 
 export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
+  const t = useT();
   const [row, setRow] = useState<FlipcastRow | null>(null);
   const [plan, setPlan] = useState<SequencePlan | null>(null);
   const [welcomeUrl, setWelcomeUrl] = useState<string | null>(null);
@@ -86,6 +101,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
   const [stage, setStage] = useState<Stage>("loading");
   const [index, setIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [retryToast, setRetryToast] = useState<string | null>(null);
   const [sceneTurns, setSceneTurns] = useState<
     Record<number, TranscriptTurnMini[]>
   >({});
@@ -107,7 +123,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
         const res = await fetch(`/api/flipcasts/${requestId}`);
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setErrorMsg(data?.error ?? "Cast not found.");
+          setErrorMsg(data?.error ?? t.standalone.notFound);
           setStage("error");
           return;
         }
@@ -216,6 +232,12 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             }));
           }
         }
+        if (evt.event === "synth_retry") {
+          setRetryToast(
+            evt.message ?? "Having a moment with the audio engine — retrying.",
+          );
+          window.setTimeout(() => setRetryToast(null), 2400);
+        }
         if (evt.event === "complete") es.close();
         if (evt.event === "failed" || evt.event === "moderation_rejected") {
           setErrorMsg(evt.message ?? "Generation failed.");
@@ -231,12 +253,21 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
   }, [requestId, row?.status]);
 
   function srcForItem(item: SequenceItem): string | null {
-    if (item.kind === "station_intro") return "/station/intro.mp3";
+    if (item.kind === "station_intro") {
+      const castVoiceIds = [
+        row?.moderatorVoiceId,
+        row?.panelist1VoiceId,
+        row?.panelist2VoiceId,
+      ].filter((v): v is string => !!v);
+      return stationIntroUrl("en", castVoiceIds);
+    }
     if (item.kind === "ad") {
       if (adRotation && adRotation.length > 0) {
         return adRotation[item.adIndex % adRotation.length] ?? null;
       }
-      return `/ads/ad-${item.adIndex + 1}.mp3`;
+      return row?.locale === "es"
+        ? `/ads/es/ad-${item.adIndex + 1}.mp3`
+        : `/ads/ad-${item.adIndex + 1}.mp3`;
     }
     if (item.kind === "welcome") return welcomeUrl;
     if (item.kind === "scene") return sceneUrls[item.sceneIndex] ?? null;
@@ -325,7 +356,6 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
 
   // Header renders regardless of stage
   const formatLabel = row ? FORMAT_LABEL[row.format] ?? row.format : "";
-  const vibeLabel = row?.vibe ?? "";
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[860px] flex-col px-6 py-6 md:px-10">
@@ -338,7 +368,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            flip.audio
+            flipcast
           </span>
         </Link>
         <Link
@@ -351,7 +381,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
 
       {stage === "loading" && (
         <div className="glass rounded-3xl p-10 text-center text-ink-500 shadow-card">
-          Loading cast…
+          {t.standalone.loadingCast}
         </div>
       )}
 
@@ -369,7 +399,6 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <span className="chip chip-sky">~{estMinutes} min</span>
               <span className="chip chip-pink">{formatLabel}</span>
-              {vibeLabel && <span className="chip chip-mint">{vibeLabel}</span>}
             </div>
             <div className="flex items-start justify-between gap-4">
               <h1 className="text-4xl font-semibold leading-tight tracking-tight text-ink-900">
@@ -400,19 +429,19 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
               />
               <div className="text-sm text-ink-500">
                 {stage === "idle" ? (
-                  <span>Ready to play. Tap the button.</span>
+                  <span>{t.standalone.readyToPlay}</span>
                 ) : stage === "finished" ? (
-                  <span>Finished. Thanks for listening.</span>
+                  <span>{t.standalone.finished}</span>
                 ) : currentItem ? (
                   <span>
                     <span className="mr-2 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold tracking-[0.08em] text-ink-500">
-                      {itemTypeLabel(currentItem)}
+                      {itemTypeLabel(currentItem, t)}
                     </span>
                     <span className="font-medium text-ink-700">
-                      {labelForItem(currentItem, plan.totalAds)}
+                      {labelForItem(currentItem, plan.totalAds, t)}
                     </span>
                     {stage === "waiting" && (
-                      <span className="ml-2 text-pink-600">generating…</span>
+                      <span className="ml-2 text-pink-600">{t.standalone.generating}</span>
                     )}
                   </span>
                 ) : null}
@@ -426,7 +455,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
                   onClick={() => skip(-1)}
                   disabled={index === 0}
                   className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-ink-700 ring-1 ring-slate-200 transition hover:bg-white disabled:opacity-40"
-                  aria-label="Previous"
+                  aria-label={t.standalone.previousAria}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
@@ -441,7 +470,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
                   type="button"
                   onClick={togglePlay}
                   className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full bg-brand-gradient text-white shadow-glow transition hover:scale-[1.03] active:scale-[0.98]"
-                  aria-label={playing ? "Pause" : "Play"}
+                  aria-label={playing ? t.player.pauseAria : t.player.playAria}
                 >
                   {playing ? (
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -460,7 +489,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
                   onClick={() => skip(1)}
                   disabled={!plan || index >= plan.items.length - 1}
                   className="grid h-11 w-11 place-items-center rounded-full bg-white/80 text-ink-700 ring-1 ring-slate-200 transition hover:bg-white disabled:opacity-40"
-                  aria-label="Next"
+                  aria-label={t.standalone.nextAria}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
@@ -511,7 +540,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             {/* Outline / flow */}
             <div className="mt-6 rounded-3xl bg-white/60 p-5 ring-1 ring-slate-200/70">
               <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-400">
-                Episode flow
+                {t.standalone.episodeFlow}
               </div>
               <ol className="flex flex-col gap-1.5">
                 {plan.items.map((item, i) => {
@@ -529,12 +558,12 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
                       }`}
                     >
                       <span className="w-8 text-[11px] font-semibold tracking-widest text-ink-400">
-                        {itemTypeLabel(item)}
+                        {itemTypeLabel(item, t)}
                       </span>
                       <span
                         className={`flex-1 ${active ? "font-medium" : ""}`}
                       >
-                        {labelForItem(item, plan.totalAds)}
+                        {labelForItem(item, plan.totalAds, t)}
                       </span>
                     </li>
                   );
@@ -557,7 +586,7 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             <section className="mt-6 glass rounded-[32px] p-6 shadow-card">
               <div className="mb-3 flex items-center gap-2">
                 <h3 className="text-lg font-semibold tracking-tight text-ink-900">
-                  Transcript
+                  {t.standalone.transcript}
                 </h3>
                 <span className="chip chip-pink text-[10px]">admin</span>
               </div>
@@ -572,19 +601,19 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
                     return (
                       <div key={idx}>
                         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-600">
-                          Scene {idx}
+                          {t.standalone.scene.replace("{n}", String(idx))}
                         </div>
                         <div className="flex flex-col gap-2">
-                          {turns.map((t) => (
+                          {turns.map((turn) => (
                             <div
-                              key={t.sequence}
+                              key={turn.sequence}
                               className="rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/70"
                             >
                               <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-pink-600">
-                                {nameFor(t.speaker)}
+                                {nameFor(turn.speaker)}
                               </div>
                               <div className="text-sm leading-relaxed text-ink-700">
-                                {t.text}
+                                {turn.text}
                               </div>
                             </div>
                           ))}
@@ -596,10 +625,13 @@ export function StandalonePlayer({ requestId, isAdmin = false }: Props) {
             </section>
           )}
 
-          <footer className="mt-auto pt-10 text-center text-xs text-ink-400">
-            flip.audio — on-demand podcasts. Keep this tab open to keep listening.
-          </footer>
         </main>
+      )}
+
+      {retryToast && (
+        <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-ink-900/90 px-5 py-2.5 text-sm font-medium text-white shadow-glow">
+          {retryToast}
+        </div>
       )}
     </div>
   );

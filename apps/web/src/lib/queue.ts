@@ -2,7 +2,7 @@ import {
   createFlipcastQueue,
   redisConnectionFromUrl,
   type FlipcastJobData,
-} from "@flipaudio/queue";
+} from "@flipcast/queue";
 import { Queue } from "bullmq";
 import { env } from "./env";
 

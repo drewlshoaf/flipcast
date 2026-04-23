@@ -7,17 +7,17 @@ import {
   transcripts,
   transcriptSegments,
   audioAssets,
-} from "@flipaudio/server-db";
+} from "@flipcast/server-db";
 import {
   AD_SECONDS,
   STATION_INTRO_SECONDS,
   WELCOME_ESTIMATE_SECONDS,
   adForSlot,
   claudeCostUsd,
-  elevenLabsCostUsd,
+  ttsCostUsd,
   planSequence,
   type ClaudeUsageAggregate,
-} from "@flipaudio/types";
+} from "@flipcast/types";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
@@ -28,7 +28,7 @@ import {
 } from "@/components/admin/flipcasts-table";
 
 const STATION_INTRO_TEXT =
-  "Thanks for choosing flip.audio. We're assembling your flip.audio and will be with you shortly — right after these short ads.";
+  "Thanks for choosing flipcast. We're assembling your flipcast and will be with you shortly — right after these short ads.";
 
 export default async function AdminFlipcastsPage() {
   const session = await requireAdmin();
@@ -47,7 +47,6 @@ export default async function AdminFlipcastsPage() {
       id: flipcastRequests.id,
       topic: flipcastRequests.topic,
       format: flipcastRequests.format,
-      vibe: flipcastRequests.vibe,
       status: flipcastRequests.status,
       createdAt: flipcastRequests.createdAt,
       welcomeText: flipcastRequests.welcomeText,
@@ -64,6 +63,9 @@ export default async function AdminFlipcastsPage() {
     .select({
       flipcastRequestId: transcripts.flipcastRequestId,
       sceneIndex: transcriptSegments.sceneIndex,
+      sequenceNumber: transcriptSegments.sequenceNumber,
+      speakerRole: transcriptSegments.speakerRole,
+      speakerName: transcriptSegments.speakerName,
       text: transcriptSegments.text,
     })
     .from(transcriptSegments)
@@ -83,6 +85,16 @@ export default async function AdminFlipcastsPage() {
 
   // requestId -> sceneIndex -> char count
   const sceneChars = new Map<string, Map<number, number>>();
+  // requestId -> ordered turns (used to render the full transcript in the
+  // admin detail view).
+  interface TranscriptTurn {
+    sceneIndex: number | null;
+    sequenceNumber: number;
+    speakerRole: string | null;
+    speakerName: string | null;
+    text: string;
+  }
+  const turnsByRequest = new Map<string, TranscriptTurn[]>();
   for (const r of segRows) {
     if (!r.flipcastRequestId) continue;
     let m = sceneChars.get(r.flipcastRequestId);
@@ -92,6 +104,57 @@ export default async function AdminFlipcastsPage() {
     }
     const scene = r.sceneIndex ?? 0;
     m.set(scene, (m.get(scene) ?? 0) + (r.text?.length ?? 0));
+
+    let list = turnsByRequest.get(r.flipcastRequestId);
+    if (!list) {
+      list = [];
+      turnsByRequest.set(r.flipcastRequestId, list);
+    }
+    list.push({
+      sceneIndex: r.sceneIndex,
+      sequenceNumber: r.sequenceNumber,
+      speakerRole: r.speakerRole,
+      speakerName: r.speakerName,
+      text: r.text,
+    });
+  }
+  for (const list of turnsByRequest.values()) {
+    list.sort((a, b) => {
+      const sa = a.sceneIndex ?? 0;
+      const sb = b.sceneIndex ?? 0;
+      if (sa !== sb) return sa - sb;
+      return a.sequenceNumber - b.sequenceNumber;
+    });
+  }
+
+  function formatTranscript(
+    topic: string,
+    welcomeText: string | null,
+    turns: TranscriptTurn[],
+  ): string {
+    const lines: string[] = [];
+    lines.push(`# ${topic}`);
+    lines.push("");
+    if (welcomeText) {
+      lines.push("## Welcome");
+      lines.push(welcomeText);
+      lines.push("");
+    }
+    const byScene = new Map<number, TranscriptTurn[]>();
+    for (const t of turns) {
+      const s = t.sceneIndex ?? 0;
+      if (!byScene.has(s)) byScene.set(s, []);
+      byScene.get(s)!.push(t);
+    }
+    for (const sceneIndex of [...byScene.keys()].sort((a, b) => a - b)) {
+      lines.push(`## Scene ${sceneIndex}`);
+      for (const t of byScene.get(sceneIndex)!) {
+        const name = t.speakerName ?? t.speakerRole ?? "—";
+        lines.push(`[${name}] ${t.text}`);
+      }
+      lines.push("");
+    }
+    return lines.join("\n").trimEnd();
   }
 
   // requestId -> asset lookup
@@ -176,6 +239,12 @@ export default async function AdminFlipcastsPage() {
     const claudeUsage =
       (r.claudeUsage as ClaudeUsageAggregate | null) ?? null;
 
+    const transcript = formatTranscript(
+      r.topic,
+      r.welcomeText ?? null,
+      turnsByRequest.get(r.id) ?? [],
+    );
+
     return {
       id: r.id,
       createdAt:
@@ -185,7 +254,6 @@ export default async function AdminFlipcastsPage() {
       ownerEmail: r.ownerEmail ?? null,
       topic: r.topic,
       format: r.format,
-      vibe: r.vibe ?? null,
       status: r.status,
       durationTargetSeconds: r.durationSecondsTarget,
       items,
@@ -195,8 +263,9 @@ export default async function AdminFlipcastsPage() {
       sceneChars: sceneChars_,
       totalChars,
       claudeCostUsd: claudeUsage ? claudeCostUsd(claudeUsage) : null,
-      elevenLabsCostUsd: elevenLabsCostUsd(sceneChars_),
+      fishCostUsd: ttsCostUsd(sceneChars_),
       claudeUsage,
+      transcript,
     };
   });
 
@@ -210,11 +279,29 @@ export default async function AdminFlipcastsPage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            flip.audio · Admin
+            flipcast · Admin
           </span>
         </Link>
         <UserChip user={sessionUser} />
       </header>
+
+      <nav className="mb-6 flex gap-1">
+        <span className="rounded-full bg-ink-900 px-4 py-1.5 text-sm font-semibold text-white">
+          Flipcasts
+        </span>
+        <Link
+          href="/admin/test-studio"
+          className="rounded-full px-4 py-1.5 text-sm font-medium text-ink-500 ring-1 ring-transparent hover:bg-ink-50 hover:text-ink-900"
+        >
+          Test Studio
+        </Link>
+        <Link
+          href="/admin/prompts"
+          className="rounded-full px-4 py-1.5 text-sm font-medium text-ink-500 ring-1 ring-transparent hover:bg-ink-50 hover:text-ink-900"
+        >
+          Prompt Engine
+        </Link>
+      </nav>
 
       <div className="mb-6">
         <h1 className="text-3xl font-semibold tracking-tight text-ink-900">
@@ -223,7 +310,7 @@ export default async function AdminFlipcastsPage() {
         <p className="mt-1 text-sm text-ink-500">
           {rows.length} request{rows.length === 1 ? "" : "s"}. Scene character
           counts are actual transcript length; ad characters come from the
-          pre-recorded ad pool (slot i → ad-{"{"}i+1{"}"}). 11Labs cost is on
+          pre-recorded ad pool (slot i → ad-{"{"}i+1{"}"}). Fish TTS cost is on
           scene + welcome characters only — ads are pre-recorded and not
           re-synthesized per flipcast.
         </p>

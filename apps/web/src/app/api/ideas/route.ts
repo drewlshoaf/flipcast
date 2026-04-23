@@ -15,6 +15,7 @@ interface IdeasPayload {
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 declare global {
+  // Single in-memory cache slot since the surface is English-only now.
   // eslint-disable-next-line no-var
   var __flipcastIdeasCache:
     | { data: IdeasPayload; expiresAt: number }
@@ -23,7 +24,7 @@ declare global {
 
 const IDEAS_TOOL = {
   name: "emit_ideas",
-  description: "Emit flip.audio topic ideas across three categories.",
+  description: "Emit flipcast topic ideas across three categories.",
   input_schema: {
     type: "object",
     properties: {
@@ -56,12 +57,25 @@ async function generateIdeas(): Promise<IdeasPayload> {
   }
 
   const client = new Anthropic({ apiKey: env.anthropicApiKey });
+  const titleShapeBlock = [
+    "TITLE SHAPE BALANCING (important): vary the surface form across the 18 ideas. Mix of:",
+    "  • STATEMENT — declarative observation. 'Boring is starting to look like a flex.'",
+    "  • CLAIM — assertion the show would defend. 'Most company AI pilots were never really meant to ship.'",
+    "  • CONTRAST — two halves in tension. 'Health advice keeps changing. Your habits probably shouldn\\'t.'",
+    "  • SOCIAL OBSERVATION — noticed pattern. 'Calling your best friend now feels weirdly high-stakes.'",
+    "  • CONTRADICTION — quietly recognized but unsaid. 'The side hustle that costs more than it pays.'",
+    "  • QUESTION — real open question (not 'Why...'). 'Are we all pretending voice notes don\\'t feel weird?'",
+    "ACROSS ALL 18 IDEAS, AT MOST 4 may use 'Why...' framing. Default to STATEMENT / CLAIM / CONTRADICTION first; reach for QUESTION only when it's genuinely the strongest shape. Banned openers: 'In this episode', 'Let\\'s dive into', 'A deep dive', 'Analyzing…', 'What this reveals about'.",
+  ].join("\n");
   const system = [
-    "You generate fresh podcast topic ideas for flip.audio, a personalized on-demand podcast.",
-    "Output 6 ideas per category, each 8-14 words, written as concrete flip.audio prompts a user could submit directly.",
+    "You generate fresh podcast topic ideas for flipcast, a personalized on-demand podcast.",
+    "Output 6 ideas per category, each 8-14 words, written as concrete flipcast prompts a user could submit directly.",
     "Vary widely across runs — don't repeat obvious topics. Be specific, opinionated, and slightly provocative.",
+    titleShapeBlock,
     "Emit strictly via the `emit_ideas` tool.",
-  ].join(" ");
+  ].join("\n\n");
+
+  const userMsg = `Generate six topic ideas for each of the three flipcast categories: today's news, learn about, talk about. Timestamp: ${new Date().toISOString()}.`;
 
   const response = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
@@ -69,12 +83,7 @@ async function generateIdeas(): Promise<IdeasPayload> {
     system,
     tools: [IDEAS_TOOL],
     tool_choice: { type: "tool", name: "emit_ideas" },
-    messages: [
-      {
-        role: "user",
-        content: `Generate six topic ideas for each of the three flip.audio categories: today's news, learn about, talk about. Timestamp: ${new Date().toISOString()}.`,
-      },
-    ],
+    messages: [{ role: "user", content: userMsg }],
   });
 
   const block = response.content.find(
@@ -132,26 +141,19 @@ export async function GET(req: Request) {
   const refresh = url.searchParams.get("refresh") === "1";
 
   const now = Date.now();
-  if (
-    !refresh &&
-    globalThis.__flipcastIdeasCache &&
-    globalThis.__flipcastIdeasCache.expiresAt > now
-  ) {
-    return NextResponse.json(globalThis.__flipcastIdeasCache.data);
+  const cached = globalThis.__flipcastIdeasCache;
+  if (!refresh && cached && cached.expiresAt > now) {
+    return NextResponse.json(cached.data);
   }
 
   try {
     const data = await generateIdeas();
-    globalThis.__flipcastIdeasCache = {
-      data,
-      expiresAt: now + CACHE_TTL_MS,
-    };
+    globalThis.__flipcastIdeasCache = { data, expiresAt: now + CACHE_TTL_MS };
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to generate ideas";
-    // Fall back to stale cache if we have one.
-    if (globalThis.__flipcastIdeasCache) {
-      return NextResponse.json(globalThis.__flipcastIdeasCache.data);
+    if (cached) {
+      return NextResponse.json(cached.data);
     }
     return NextResponse.json({ error: message }, { status: 500 });
   }

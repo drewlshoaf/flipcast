@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   email: string;
@@ -16,6 +17,7 @@ interface PendingCreds {
 
 export function VerifyForm({ email: emailFromUrl, next }: Props) {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState(emailFromUrl);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -64,7 +66,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error ?? "Verification failed.");
+        setError(data?.error ?? t.auth.verify.error);
         return;
       }
       // Now sign in with the password we stashed (or the one they retyped).
@@ -75,7 +77,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
       });
       clearPendingPw();
       if (!signin || signin.error) {
-        setInfo("Email verified. Log in to continue.");
+        setInfo(t.auth.verify.infoVerified);
         router.push(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
@@ -90,7 +92,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
     // Simple client-side 60s throttle so the button isn't spammable.
     const now = Date.now();
     if (now - resendAtRef.current < 60_000) {
-      setInfo("Hang on — wait a few seconds before resending.");
+      setInfo(t.auth.verify.resendCooldown);
       return;
     }
     resendAtRef.current = now;
@@ -103,7 +105,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      setInfo("New code sent. Check the server logs.");
+      setInfo(t.auth.verify.resendSuccess);
     } finally {
       setResending(false);
     }
@@ -113,7 +115,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <label className="block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-          Email
+          {t.auth.emailLabel}
         </span>
         <input
           type="email"
@@ -126,7 +128,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
       </label>
       <label className="block">
         <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-          6-digit code
+          {t.auth.verify.codeLabel}
         </span>
         <input
           type="text"
@@ -145,7 +147,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
       {!havePendingPw && (
         <label className="block">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-            Password
+            {t.auth.passwordLabel}
           </span>
           <input
             type="password"
@@ -157,7 +159,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
             autoComplete="current-password"
           />
           <span className="mt-1 block text-[11px] text-ink-400">
-            We lost the one you just typed — re-enter it so we can log you in.
+            {t.auth.verify.passwordFallbackHint}
           </span>
         </label>
       )}
@@ -176,7 +178,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
         disabled={submitting}
         className="inline-flex h-12 items-center justify-center rounded-full bg-brand-gradient px-6 text-base font-semibold text-white shadow-glow transition hover:scale-[1.01] disabled:opacity-60"
       >
-        {submitting ? "Verifying…" : "Verify"}
+        {submitting ? t.auth.verify.submitting : t.auth.verify.submit}
       </button>
       <button
         type="button"
@@ -184,7 +186,7 @@ export function VerifyForm({ email: emailFromUrl, next }: Props) {
         disabled={resending}
         className="text-sm font-medium text-ink-500 underline decoration-slate-300 underline-offset-4 hover:text-ink-900 disabled:opacity-60"
       >
-        {resending ? "Resending…" : "Resend code"}
+        {resending ? t.auth.verify.resending : t.auth.verify.resend}
       </button>
     </form>
   );

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { INTEREST_CATALOG } from "@flipaudio/types";
+import { INTEREST_CATALOG } from "@flipcast/types";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   initialSelected: string[];
@@ -10,6 +11,7 @@ interface Props {
 
 export function InterestsPicker({ initialSelected }: Props) {
   const router = useRouter();
+  const t = useT();
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(initialSelected),
   );
@@ -42,11 +44,11 @@ export function InterestsPicker({ initialSelected }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setToast(data?.error ?? "Couldn't save interests.");
+        setToast(data?.error ?? t.profile.interestsSaveFailed);
         return;
       }
       setSavedSelected(new Set(selected));
-      setToast("Interests saved.");
+      setToast(t.profile.interestsSaved);
       router.refresh();
     } finally {
       setSaving(false);
@@ -59,19 +61,22 @@ export function InterestsPicker({ initialSelected }: Props) {
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-            Interests
+            {t.profile.interestsHeader}
           </h2>
           <p className="mt-1 text-sm text-ink-500">
-            Tap what you care about. We use these to suggest topics — and the
-            ads in your Flipcasts.
+            {t.profile.interestsHelp}
           </p>
         </div>
-        <span className="text-xs text-ink-400">{selected.size} picked</span>
+        <span className="text-xs text-ink-400">
+          {t.profile.interestsCount.replace("{n}", String(selected.size))}
+        </span>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {INTEREST_CATALOG.map((i) => {
           const on = selected.has(i.id);
+          const label =
+            t.interests[i.id as keyof typeof t.interests] ?? i.label;
           return (
             <button
               key={i.id}
@@ -84,7 +89,7 @@ export function InterestsPicker({ initialSelected }: Props) {
               }`}
             >
               <span aria-hidden>{i.emoji}</span>
-              <span>{i.label}</span>
+              <span>{label}</span>
             </button>
           );
         })}
@@ -97,7 +102,7 @@ export function InterestsPicker({ initialSelected }: Props) {
           disabled={saving || !dirty}
           className="inline-flex h-11 items-center rounded-full bg-ink-900 px-6 text-sm font-semibold text-white transition hover:scale-[1.02] disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save interests"}
+          {saving ? t.profile.interestsSaving : t.profile.interestsSave}
         </button>
         {toast && (
           <span className="text-xs text-ink-500">{toast}</span>

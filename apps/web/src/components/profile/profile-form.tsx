@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   userId: string;
@@ -23,6 +24,7 @@ export function ProfileForm({
   initialImage,
 }: Props) {
   const router = useRouter();
+  const t = useT();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [name, setName] = useState(initialName);
   const [image, setImage] = useState<string | null>(initialImage);
@@ -49,10 +51,10 @@ export function ProfileForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        flash(data?.error ?? "Couldn't save.", "err");
+        flash(data?.error ?? t.profile.saveFailed, "err");
         return;
       }
-      flash("Saved.");
+      flash(t.profile.saved);
       router.refresh();
     } finally {
       setSavingName(false);
@@ -63,7 +65,7 @@ export function ProfileForm({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      flash("Image must be under 5 MB.", "err");
+      flash(t.profile.avatarSizeError, "err");
       return;
     }
     setUploading(true);
@@ -76,11 +78,11 @@ export function ProfileForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        flash(data?.error ?? "Upload failed.", "err");
+        flash(data?.error ?? t.profile.avatarUploadFailed, "err");
         return;
       }
       setImage(data.image as string);
-      flash("Avatar updated.");
+      flash(t.profile.avatarUpdated);
       router.refresh();
     } finally {
       setUploading(false);
@@ -93,7 +95,7 @@ export function ProfileForm({
       {/* Avatar block */}
       <section className="glass rounded-3xl p-6 shadow-card">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-          Avatar
+          {t.profile.avatarHeader}
         </h2>
         <div className="mt-4 flex items-center gap-5">
           {image ? (
@@ -115,10 +117,14 @@ export function ProfileForm({
               disabled={uploading}
               className="inline-flex h-10 items-center rounded-full bg-ink-900 px-5 text-sm font-semibold text-white transition hover:scale-[1.02] disabled:opacity-60"
             >
-              {uploading ? "Uploading…" : image ? "Replace" : "Upload"}
+              {uploading
+                ? t.profile.avatarUploading
+                : image
+                  ? t.profile.avatarReplace
+                  : t.profile.avatarUpload}
             </button>
             <span className="text-xs text-ink-400">
-              PNG/JPG, under 5 MB.
+              {t.profile.avatarHint}
             </span>
           </div>
         </div>
@@ -134,25 +140,25 @@ export function ProfileForm({
       {/* Name + email block */}
       <section className="glass rounded-3xl p-6 shadow-card">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-ink-400">
-          Identity
+          {t.profile.identityHeader}
         </h2>
         <form onSubmit={saveName} className="mt-4 flex flex-col gap-4">
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-              Display name
+              {t.profile.nameLabel}
             </span>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="What should we call you?"
+              placeholder={t.profile.namePlaceholder}
               maxLength={80}
               className="w-full rounded-2xl bg-white/80 px-4 py-3 text-base text-ink-900 outline-none ring-1 ring-slate-200 transition focus:ring-2 focus:ring-sky-300"
             />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-ink-400">
-              Email
+              {t.profile.emailLabel}
             </span>
             <input
               type="email"
@@ -161,7 +167,7 @@ export function ProfileForm({
               className="w-full cursor-not-allowed rounded-2xl bg-slate-50 px-4 py-3 text-base text-ink-500 ring-1 ring-slate-200"
             />
             <span className="mt-1 block text-[11px] text-ink-400">
-              Email is your login id and can't be changed yet.
+              {t.profile.emailLocked}
             </span>
           </label>
           <button
@@ -169,7 +175,7 @@ export function ProfileForm({
             disabled={savingName || name === initialName}
             className="inline-flex h-11 items-center justify-center self-start rounded-full bg-brand-gradient px-6 text-sm font-semibold text-white shadow-glow transition hover:scale-[1.01] disabled:opacity-60"
           >
-            {savingName ? "Saving…" : "Save name"}
+            {savingName ? t.profile.saving : t.profile.saveName}
           </button>
         </form>
       </section>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { sanitizeInterests } from "@flipaudio/types";
-import { users } from "@flipaudio/server-db";
+import { sanitizeInterests } from "@flipcast/types";
+import { users } from "@flipcast/server-db";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 

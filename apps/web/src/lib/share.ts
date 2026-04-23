@@ -10,7 +10,7 @@ export interface ShareTargetMeta {
 }
 
 export function twitterHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio`);
+  const text = encodeURIComponent(`Listen to "${topic}" on flipcast`);
   return `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
 }
 
@@ -27,17 +27,17 @@ export function redditHref(topic: string, url: string): string {
 }
 
 export function whatsappHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio — ${url}`);
+  const text = encodeURIComponent(`Listen to "${topic}" on flipcast — ${url}`);
   return `https://wa.me/?text=${text}`;
 }
 
 export function threadsHref(topic: string, url: string): string {
-  const text = encodeURIComponent(`Listen to "${topic}" on flip.audio — ${url}`);
+  const text = encodeURIComponent(`Listen to "${topic}" on flipcast — ${url}`);
   return `https://www.threads.net/intent/post?text=${text}`;
 }
 
 export function emailHref(topic: string, url: string): string {
-  const subject = encodeURIComponent(`flip.audio — ${topic}`);
+  const subject = encodeURIComponent(`flipcast — ${topic}`);
   const body = encodeURIComponent(
     `Thought you'd like this:\n\n"${topic}"\n\n${url}`,
   );

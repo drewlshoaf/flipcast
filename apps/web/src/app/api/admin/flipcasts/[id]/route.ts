@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { flipcastRequests } from "@flipaudio/server-db";
+import { flipcastRequests } from "@flipcast/server-db";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 

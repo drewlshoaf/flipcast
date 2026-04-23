@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import { users } from "@flipaudio/server-db";
+import { users } from "@flipcast/server-db";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { InterestsPicker } from "@/components/profile/interests-picker";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
+import { getDictionary } from "@/lib/i18n/server";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -27,6 +28,8 @@ export default async function ProfilePage() {
     isAdmin: row.isAdmin ?? false,
   };
 
+  const t = getDictionary();
+
   return (
     <div className="mx-auto max-w-[760px] px-6 py-6 md:px-10">
       <header className="mb-10 flex items-center justify-between">
@@ -37,17 +40,19 @@ export default async function ProfilePage() {
             </svg>
           </span>
           <span className="text-base font-semibold tracking-tight text-ink-900">
-            flip.audio
+            flipcast
           </span>
         </Link>
-        <UserChip user={sessionUser} />
+        <div className="flex items-center gap-3">
+          <UserChip user={sessionUser} />
+        </div>
       </header>
 
       <h1 className="text-3xl font-semibold tracking-tight text-ink-900">
-        Profile
+        {t.profile.title}
       </h1>
       <p className="mt-1 text-base text-ink-500">
-        How you show up across flip.audio.
+        {t.profile.subtitle}
       </p>
 
       <div className="mt-8 flex flex-col gap-6">

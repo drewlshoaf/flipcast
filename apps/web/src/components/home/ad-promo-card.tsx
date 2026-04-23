@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 interface Props {
   // When set, the input auto-fills with this value. Only overwrites while the
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export function AdPromoCard({ prefill }: Props = {}) {
+  const t = useT();
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<null | { kind: "ok" | "err"; msg: string }>(
     null,
@@ -31,13 +33,13 @@ export function AdPromoCard({ prefill }: Props = {}) {
     e.preventDefault();
     const trimmed = code.trim();
     if (!trimmed) {
-      setStatus({ kind: "err", msg: "Enter the code you heard on the episode." });
+      setStatus({ kind: "err", msg: t.adPromo.emptyError });
       return;
     }
     // Placeholder — real redemption wiring can go here once we add an endpoint.
     setStatus({
       kind: "ok",
-      msg: `Got it — "${trimmed}" queued up. Check your email for the discount.`,
+      msg: t.adPromo.success.replace("{code}", `"${trimmed}"`),
     });
     setCode("");
   }
@@ -46,13 +48,12 @@ export function AdPromoCard({ prefill }: Props = {}) {
     <div className="glass rounded-[32px] p-6 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <span className="chip chip-pink">Ad Promo Code</span>
+          <span className="chip chip-pink">{t.adPromo.badge}</span>
           <h3 className="mt-2 text-xl font-semibold tracking-tight text-ink-900">
-            Heard something good?
+            {t.adPromo.title}
           </h3>
           <p className="mt-1 text-sm leading-snug text-ink-500">
-            This is where our listeners enter codes to get special discounts on
-            brands.
+            {t.adPromo.description}
           </p>
         </div>
       </div>
@@ -64,7 +65,7 @@ export function AdPromoCard({ prefill }: Props = {}) {
             setCode(e.target.value);
             if (status) setStatus(null);
           }}
-          placeholder="e.g. FLIPCAST20"
+          placeholder={t.adPromo.placeholder}
           className="h-12 flex-1 rounded-full bg-white/80 px-5 text-base uppercase tracking-wide text-ink-900 outline-none ring-1 ring-slate-200 transition placeholder:text-ink-300 focus:ring-2 focus:ring-sky-300"
           autoComplete="off"
           maxLength={32}
@@ -73,7 +74,7 @@ export function AdPromoCard({ prefill }: Props = {}) {
           type="submit"
           className="inline-flex h-12 shrink-0 items-center rounded-full bg-brand-gradient px-6 text-sm font-semibold text-white shadow-glow transition hover:scale-[1.02] active:scale-[0.98]"
         >
-          Get it
+          {t.adPromo.submit}
         </button>
       </form>
       {status && (

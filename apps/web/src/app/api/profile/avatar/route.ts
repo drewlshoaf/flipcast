@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { users } from "@flipaudio/server-db";
+import { users } from "@flipcast/server-db";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { env } from "@/lib/env";

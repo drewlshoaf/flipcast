@@ -82,7 +82,7 @@ Body copy should be:
 
 ### Top navigation
 Include:
-- Flipcast / flip.audio logo at top left
+- Flipcast / flipcast logo at top left
 - light navigation treatment in the center or near-center
 - a primary action on the right such as “Open Studio”
 - optional avatar/account chip

@@ -2,7 +2,7 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { accounts, users } from "@flipaudio/server-db";
+import { accounts, users } from "@flipcast/server-db";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "./db";

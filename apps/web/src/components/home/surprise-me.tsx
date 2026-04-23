@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { BUBBLES } from "./topic-bubbles";
+import { useT } from "@/lib/i18n/client";
 
 // Picks a random bubble topic and routes to /studio with it prefilled.
 // Tiny client island so the rest of the home page can stay an RSC.
 export function SurpriseMe() {
   const router = useRouter();
+  const t = useT();
 
   function go() {
     const pick = BUBBLES[Math.floor(Math.random() * BUBBLES.length)];
@@ -21,7 +23,7 @@ export function SurpriseMe() {
       className="inline-flex h-12 items-center gap-2 rounded-full bg-white/85 px-6 text-sm font-semibold text-ink-700 ring-1 ring-slate-200 shadow-card transition hover:bg-white hover:shadow-cardHover"
     >
       <span aria-hidden>🎲</span>
-      Surprise me
+      {t.home.surpriseMe}
     </button>
   );
 }

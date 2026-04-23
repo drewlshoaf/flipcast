@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
 import { AdPromoCard } from "@/components/home/ad-promo-card";
-import { BUBBLES, bubbleClass } from "@/components/home/topic-bubbles";
+import { BUBBLES, bubbleClass, type Bubble } from "@/components/home/topic-bubbles";
 import { SurpriseMe } from "@/components/home/surprise-me";
 import {
   SAMPLE_PROMPTS,
   PROMPT_TILE_CLASS,
   PROMPT_DOT_CLASS,
+  type PromptAccent,
+  type SamplePrompt,
 } from "@/lib/sample-prompts";
+import { getDictionary } from "@/lib/i18n/server";
+import { loadHomePromptConcepts } from "@/lib/prompt-engine";
 
 function studioHref(topic?: string): string {
   if (!topic) return "/studio";
@@ -18,7 +22,35 @@ interface HomePageProps {
   sessionUser: SessionUser | null;
 }
 
-export function HomePage({ sessionUser }: HomePageProps) {
+// Engine concepts share the same tile shape as the legacy SAMPLE_PROMPTS,
+// so we rotate through five accents for visual variety. Fallback to the
+// static list on any engine failure so this surface is never empty.
+const PROMPT_ACCENTS: PromptAccent[] = [
+  "sky",
+  "pink",
+  "mint",
+  "violet",
+  "amber",
+];
+
+async function resolveHomePrompts(): Promise<SamplePrompt[]> {
+  try {
+    const engine = await loadHomePromptConcepts({ locale: "en" });
+    if (engine.concepts.length === 0) return SAMPLE_PROMPTS;
+    return engine.concepts.slice(0, 16).map((c, i) => ({
+      text: c.prompt_concept,
+      accent: PROMPT_ACCENTS[i % PROMPT_ACCENTS.length]!,
+    }));
+  } catch {
+    return SAMPLE_PROMPTS;
+  }
+}
+
+export async function HomePage({ sessionUser }: HomePageProps) {
+  const t = getDictionary();
+  const bubbles: Bubble[] = BUBBLES;
+  const prompts: SamplePrompt[] = await resolveHomePrompts();
+
   return (
     <div className="mx-auto max-w-[1280px] px-6 py-6 md:px-10">
       {/* Top nav */}
@@ -30,7 +62,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
             </svg>
           </span>
           <span className="text-lg font-semibold tracking-tight text-ink-900">
-            flip.audio
+            flipcast
           </span>
         </Link>
         <div className="flex items-center gap-3">
@@ -38,7 +70,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
             href={studioHref()}
             className="hidden h-10 items-center gap-2 rounded-full bg-ink-900 px-5 text-sm font-semibold text-white transition hover:scale-[1.02] sm:inline-flex"
           >
-            Open Studio
+            {t.home.openStudio}
             <span aria-hidden>→</span>
           </Link>
           <UserChip user={sessionUser} loginNext="/studio" />
@@ -53,7 +85,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
             overrides Tailwind's hover:-translate-y-0.5 utility and the
             chips feel dead. */}
         <div className="pointer-events-none absolute inset-0 hidden md:block">
-          {BUBBLES.map((b) => (
+          {bubbles.map((b) => (
             <div
               key={b.text}
               className="pointer-events-auto absolute z-0 hover:z-10"
@@ -76,8 +108,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
         {/* Soft white glow behind the central read zone */}
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/55 blur-2xl" />
 
-        {/* Ad promo code tile, top-right of the hero. Sits above the bubble
-            field via z-index. Hidden on small screens to keep mobile clean. */}
+        {/* Ad promo code tile, top-right of the hero. */}
         <div className="pointer-events-auto absolute right-0 top-0 z-20 hidden w-[380px] md:block">
           <AdPromoCard />
         </div>
@@ -87,7 +118,7 @@ export function HomePage({ sessionUser }: HomePageProps) {
           {/* Big pink play button */}
           <Link
             href={studioHref()}
-            aria-label="Start a flip"
+            aria-label={t.home.startFlipAria}
             className="group relative grid h-32 w-32 place-items-center rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-rose-500 shadow-glow ring-1 ring-pink-300/60 transition hover:scale-[1.04] active:scale-[0.98] md:h-40 md:w-40"
           >
             <span className="absolute inset-0 rounded-full bg-pink-300 opacity-30 blur-xl transition group-hover:opacity-50" />
@@ -105,15 +136,13 @@ export function HomePage({ sessionUser }: HomePageProps) {
 
           <h1 className="mt-8 text-4xl font-semibold leading-[1.05] tracking-tight text-ink-900 md:text-6xl">
             <span className="bg-brand-gradient bg-clip-text text-transparent">
-              You
+              {t.home.headlineLead}
             </span>{" "}
-            pick the show.
+            {t.home.headlineTail}
           </h1>
 
           <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-500 md:text-lg">
-            Drop a topic — a headline, a hot take, something you can't stop
-            thinking about — and flip.audio produces an episode you can play
-            right now.
+            {t.home.subhead}
           </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
@@ -121,20 +150,20 @@ export function HomePage({ sessionUser }: HomePageProps) {
               href={studioHref()}
               className="inline-flex h-12 items-center rounded-full bg-brand-gradient px-7 text-base font-semibold text-white shadow-glow transition hover:scale-[1.02]"
             >
-              Start a flip
+              {t.home.startFlip}
             </Link>
             <SurpriseMe />
           </div>
         </div>
       </section>
 
-      {/* Mobile-only fallback chip row, since the bubble field is hidden */}
+      {/* Mobile-only fallback chip row */}
       <section className="mb-12 md:hidden">
         <div className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">
-          Try one of these
+          {t.home.tryOneOfThese}
         </div>
         <div className="flex flex-wrap gap-2">
-          {BUBBLES.slice(0, 8).map((b) => (
+          {bubbles.slice(0, 8).map((b) => (
             <Link
               key={b.text}
               href={studioHref(b.text)}
@@ -147,23 +176,23 @@ export function HomePage({ sessionUser }: HomePageProps) {
       </section>
 
       {/* More sample prompts */}
-      <section className="mb-12">
+      <section className="mb-12 mt-6 md:-ml-3">
         <div className="mb-6 flex items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight text-ink-900 md:text-3xl">
-              More to start from.
+              {t.home.moreTitle}
             </h2>
             <p className="mt-1 text-sm text-ink-500">
-              Tap any prompt — the studio opens with it filled in.
+              {t.home.moreSubtitle}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {SAMPLE_PROMPTS.map((p) => (
+          {prompts.map((p) => (
             <Link
               key={p.text}
               href={studioHref(p.text)}
-              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-sm font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card ${PROMPT_TILE_CLASS[p.accent]}`}
+              className={`group flex items-center gap-3 rounded-2xl p-4 text-left text-base font-medium text-ink-700 ring-1 transition hover:-translate-y-0.5 hover:shadow-card md:text-lg ${PROMPT_TILE_CLASS[p.accent]}`}
             >
               <span
                 className={`inline-block h-2 w-2 shrink-0 rounded-full ${PROMPT_DOT_CLASS[p.accent]}`}
@@ -181,9 +210,6 @@ export function HomePage({ sessionUser }: HomePageProps) {
         </div>
       </section>
 
-      <footer className="border-t border-slate-200/70 pt-6 text-xs text-ink-400">
-        <span>flip.audio — on-demand podcasts, one topic at a time.</span>
-      </footer>
     </div>
   );
 }

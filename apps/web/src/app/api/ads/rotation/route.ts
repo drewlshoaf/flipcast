@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { ads, users } from "@flipaudio/server-db";
+import { ads, users } from "@flipcast/server-db";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 

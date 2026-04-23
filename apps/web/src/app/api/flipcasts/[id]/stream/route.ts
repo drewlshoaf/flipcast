@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { flipcastRequests } from "@flipaudio/server-db";
-import { sseChannel, type SseEvent } from "@flipaudio/types";
-import { createRedisSubscriber } from "@flipaudio/queue";
+import { flipcastRequests } from "@flipcast/server-db";
+import { sseChannel, type SseEvent } from "@flipcast/types";
+import { createRedisSubscriber } from "@flipcast/queue";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import type Redis from "ioredis";
