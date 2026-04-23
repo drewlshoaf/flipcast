@@ -1,5 +1,5 @@
-import { createRedisPublisher, publishSseEvent } from "@flipaudio/queue";
-import type { SseEvent, SseEventName } from "@flipaudio/types";
+import { createRedisPublisher, publishSseEvent } from "@flipcast/queue";
+import type { SseEvent, SseEventName } from "@flipcast/types";
 import { env } from "./env";
 
 const pub = createRedisPublisher(env.redisUrl);

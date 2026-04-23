@@ -1,4 +1,4 @@
-import { VOICE_BY_ID, type TtsEngine } from "@flipaudio/types";
+import { VOICE_BY_ID, type TtsEngine } from "@flipcast/types";
 import { synthesizeWithPolly } from "./polly";
 import { synthesizeWithFish } from "./fish";
 

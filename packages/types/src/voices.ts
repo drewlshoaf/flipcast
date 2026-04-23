@@ -18,7 +18,7 @@ export type VoiceOrigin =
   | "spanish"
   | "generic";
 
-export type VoiceLanguage = "en" | "es";
+export type VoiceLanguage = "en";
 
 export interface VoiceOption {
   id: string;
@@ -35,7 +35,6 @@ export interface VoiceOption {
 
 export const LANGUAGES: { id: VoiceLanguage; label: string; emoji: string }[] = [
   { id: "en", label: "English", emoji: "🇺🇸" },
-  { id: "es", label: "Español", emoji: "🇪🇸" },
 ];
 
 export const VOICES: VoiceOption[] = [
@@ -60,14 +59,6 @@ export const VOICES: VoiceOption[] = [
   { id: "fa-jim", label: "Jim", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "d8a1340984ee4b63ad1ffae27a6a4339" },
   { id: "fa-charlie", label: "Charlie", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "fb7ec16ca51a45a5a4db881244d7990a" },
   { id: "fa-alex", label: "Alex", gender: "male", engines: ["fish"], provider: "fish", origin: "american", language: "en", providerVoiceId: "c85fb11f91f84312a4bd16756f298ae2" },
-
-  // --- Fish Audio Spanish voices (s2-pro). ---
-  { id: "fa-juan", label: "Juan", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "3f45a7fd7a614655a61eb7027b955783" },
-  { id: "fa-valentino", label: "Valentino", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "8d2c17a9b26d4d83888ea67a1ee565b2" },
-  { id: "fa-jesus", label: "Jesus", gender: "male", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "f53102becdf94a51af6d64010bc658f2" },
-  { id: "fa-maria", label: "Maria", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "33249d5cc43047d8a491cb5ab2cdabd8" },
-  { id: "fa-isabel", label: "Isabel", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "3f4269ada36440ab821b6729e7083310" },
-  { id: "fa-alejandra", label: "Alejandra", gender: "female", engines: ["fish"], provider: "fish", origin: "spanish", language: "es", providerVoiceId: "5e816f5a0658460b960881a24733c418" },
 ];
 
 export const FISH_VOICES: VoiceOption[] = VOICES.filter(
@@ -85,12 +76,39 @@ export function resolveProviderVoiceId(voice: VoiceOption): string {
   return voice.providerVoiceId ?? voice.id;
 }
 
+// Pick the station-intro voice gender from the cast. Female-majority casts
+// (or ties with at least one female) get the female intro; otherwise male.
+// Unknown ids are skipped, so a partial pick still produces a sensible answer.
+export function pickStationIntroGender(
+  voiceIds: readonly string[],
+): "male" | "female" {
+  let f = 0;
+  let m = 0;
+  for (const id of voiceIds) {
+    const v = VOICE_BY_ID.get(id);
+    if (v?.gender === "female") f++;
+    else if (v?.gender === "male") m++;
+  }
+  return f >= m && f > 0 ? "female" : "male";
+}
+
+// Path to the gendered station intro mp3 for the cast picks. English-only.
+// Locale param kept on the signature for backward-compat with existing
+// callers but is ignored.
+export function stationIntroUrl(
+  _locale: "en",
+  voiceIds: readonly string[],
+): string {
+  const gender = pickStationIntroGender(voiceIds);
+  return `/station/intro-${gender}.mp3`;
+}
+
 // ---------------- Format + vibe catalog ----------------
 
 export const AVAILABLE_FORMATS = [
   {
     id: "newscast",
-    label: "Anchor",
+    label: "Solo",
     description: "A single host delivering a clean, authoritative report.",
     castSize: 1,
     engine: "fish" as const,
@@ -130,7 +148,7 @@ export const UI_FORMATS: {
 }[] = [
   {
     id: "newscast",
-    label: "Anchor",
+    label: "Solo",
     description: "One host. Clean, authoritative delivery.",
     accent: "pink",
     disabled: false,
@@ -212,7 +230,7 @@ export interface SequencePlan {
   estimatedSeconds: number;
 }
 
-/** Fixed flip.audio playback sequence — never plays 3 ads in a row:
+/** Fixed flipcast playback sequence — never plays 3 ads in a row:
  *   station_intro (~10s) → ad (25s) → ad (25s) → welcome (~30s)
  *   → ad (25s) → scene 1 (120s) → ad (25s) → scene 2 (120s)
  *   → ad (25s) → scene 3 (60s, final)

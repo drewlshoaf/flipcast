@@ -1,11 +1,16 @@
 import { Queue, type ConnectionOptions } from "bullmq";
 import Redis from "ioredis";
-import { sseChannel, type SseEvent } from "@flipaudio/types";
+import { sseChannel, type SseEvent } from "@flipcast/types";
 
 export const FLIPCAST_QUEUE = "flipcast";
 
 export interface FlipcastJobData {
   requestId: string;
+  // Admin-only fast-iteration mode: skip Fish TTS synthesis. Worker still
+  // runs the full Claude pipeline (classify → setup → scenes → validate),
+  // but no audio is produced. Default false; only honored when the API
+  // confirmed the requesting user is an admin.
+  transcriptOnly?: boolean;
 }
 
 export function redisConnectionFromUrl(url: string): ConnectionOptions {

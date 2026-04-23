@@ -11,6 +11,8 @@ export const SSE_EVENTS = [
   "scene_generation_started",
   "scene_synth_started",
   "scene_ready",
+  "synth_retry",
+  "validation_complete",
   "complete",
   "failed",
 ] as const;

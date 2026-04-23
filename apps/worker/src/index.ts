@@ -3,7 +3,7 @@ import {
   FLIPCAST_QUEUE,
   redisConnectionFromUrl,
   type FlipcastJobData,
-} from "@flipaudio/queue";
+} from "@flipcast/queue";
 import { env } from "./env";
 import { runPipeline } from "./pipeline/run";
 
@@ -12,9 +12,12 @@ const connection = redisConnectionFromUrl(env.redisUrl);
 const worker = new Worker<FlipcastJobData>(
   FLIPCAST_QUEUE,
   async (job) => {
-    console.log(`[worker] processing ${job.data.requestId}`);
-    await runPipeline(job.data.requestId);
-    console.log(`[worker] completed ${job.data.requestId}`);
+    const { requestId, transcriptOnly } = job.data;
+    console.log(
+      `[worker] processing ${requestId}${transcriptOnly ? " (transcript-only)" : ""}`,
+    );
+    await runPipeline(requestId, { transcriptOnly: Boolean(transcriptOnly) });
+    console.log(`[worker] completed ${requestId}`);
   },
   {
     connection,

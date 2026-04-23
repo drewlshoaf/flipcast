@@ -4,7 +4,7 @@ import {
   transcripts,
   transcriptSegments,
   audioAssets,
-} from "@flipaudio/server-db";
+} from "@flipcast/server-db";
 import {
   VOICE_BY_ID,
   planSequence,
@@ -15,26 +15,28 @@ import {
   type Character,
   type ClaudeCallUsage,
   type ClaudeUsageAggregate,
+  type EpisodeMetadata,
   type EpisodeSetup,
   type TranscriptTurn,
   type SpeakerRole,
   type FlipcastFormat,
-  type FlipcastVibe,
   type SceneOutline,
-} from "@flipaudio/types";
+} from "@flipcast/types";
 import { db } from "../db";
 import { env } from "../env";
 import { emit } from "../emit";
 import {
+  classifyEpisode,
   generateSetup,
   generateScene,
   generateFullNewscast,
+  validateEpisode,
 } from "../clients/anthropic";
 import { synthesizeSegment } from "../clients/tts";
 import { synthesizeWithFishMulti } from "../clients/fish";
 import { uploadObject } from "../clients/s3";
 import { spawn } from "node:child_process";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -53,6 +55,148 @@ function pauseTagForMs(ms: number): string {
   if (ms >= 800) return " [pause]";
   if (ms >= 300) return " [short pause]";
   return "";
+}
+
+// Fish S2 Pro multi-speaker voices drift when a single call has many speaker
+// switches (~25+ turns). Split the scene into chunks bounded by turn count
+// *and* character budget, render each chunk as its own Fish call, and concat
+// the mp3s. Each call gets the same `reference_id` array so the speaker↔voice
+// mapping stays locked across chunks.
+const MAX_TURNS_PER_FISH_CHUNK = 8;
+const MAX_CHARS_PER_FISH_CHUNK = 700;
+
+function chunkTurnsForMultiSpeaker(
+  turns: TranscriptTurn[],
+): TranscriptTurn[][] {
+  const chunks: TranscriptTurn[][] = [];
+  let current: TranscriptTurn[] = [];
+  let currentChars = 0;
+  for (const t of turns) {
+    const tLen = t.text.length;
+    if (
+      current.length >= MAX_TURNS_PER_FISH_CHUNK ||
+      (current.length > 0 && currentChars + tLen > MAX_CHARS_PER_FISH_CHUNK)
+    ) {
+      chunks.push(current);
+      current = [];
+      currentChars = 0;
+    }
+    current.push(t);
+    currentChars += tLen;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+// Retry a synthesis call up to 3 attempts with exponential backoff. On each
+// non-final failure, emit a `synth_retry` SSE event so the UI can pop a
+// "having a moment" notice instead of the user staring at a stuck buffer.
+async function synthWithRetry<T>(opts: {
+  requestId: string;
+  label: string;
+  data?: Record<string, unknown>;
+  call: () => Promise<T>;
+}): Promise<T> {
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await opts.call();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === maxAttempts) break;
+      console.warn(
+        `[synth] ${opts.label} attempt ${attempt}/${maxAttempts} failed:`,
+        err instanceof Error ? err.message : err,
+      );
+      await emit("synth_retry", opts.requestId, {
+        message:
+          "Having a moment with the audio engine — retrying. One sec.",
+        data: {
+          ...opts.data,
+          label: opts.label,
+          attempt,
+          ofAttempts: maxAttempts,
+        },
+      });
+      // 600ms, then 1.4s — quick first retry, longer second.
+      await new Promise((r) => setTimeout(r, 600 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
+async function runFfmpeg(args: string[]): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn("ffmpeg", args, {
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    let stderr = "";
+    proc.stderr.on("data", (c) => (stderr += c.toString()));
+    proc.on("error", reject);
+    proc.on("close", (code) => {
+      if (code === 0) resolve();
+      else
+        reject(
+          new Error(`ffmpeg exit ${code}: ${stderr.slice(-500) || "(no log)"}`),
+        );
+    });
+  });
+}
+
+// Two-pass concat: normalize each chunk to canonical 44.1 kHz mono 128 kbps
+// mp3, then concat demuxer with -c copy. Fish mp3s are usually uniform
+// already but normalization eliminates sample-rate/bitrate mismatch as a
+// failure mode.
+async function concatMp3s(buffers: Buffer[]): Promise<Buffer> {
+  if (buffers.length === 0) throw new Error("concatMp3s: no buffers");
+  if (buffers.length === 1) return buffers[0]!;
+  const workDir = await mkdtemp(join(tmpdir(), "flipcast-concat-"));
+  try {
+    const normalized: string[] = [];
+    for (let i = 0; i < buffers.length; i++) {
+      const inPath = join(workDir, `in-${i}.mp3`);
+      const outPath = join(workDir, `norm-${i}.mp3`);
+      await writeFile(inPath, buffers[i]!);
+      await runFfmpeg([
+        "-y",
+        "-i",
+        inPath,
+        "-ar",
+        "44100",
+        "-ac",
+        "1",
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "128k",
+        outPath,
+      ]);
+      normalized.push(outPath);
+    }
+    const listPath = join(workDir, "list.txt");
+    const listBody =
+      normalized
+        .map((p) => `file '${p.replace(/'/g, "'\\''")}'`)
+        .join("\n") + "\n";
+    await writeFile(listPath, listBody);
+    const outPath = join(workDir, "out.mp3");
+    await runFfmpeg([
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listPath,
+      "-c",
+      "copy",
+      outPath,
+    ]);
+    return await readFile(outPath);
+  } finally {
+    await rm(workDir, { recursive: true, force: true });
+  }
 }
 
 // Probe the duration of an mp3 Buffer via ffprobe (writes to a temp file,
@@ -88,7 +232,17 @@ async function probeMp3DurationMsFromBuffer(buf: Buffer): Promise<number> {
   }
 }
 
-export async function runPipeline(requestId: string): Promise<void> {
+interface RunPipelineOptions {
+  // Admin fast-iteration: still run the full Claude pipeline (classify →
+  // setup → scenes → validate) but skip Fish TTS for welcome and scenes.
+  transcriptOnly?: boolean;
+}
+
+export async function runPipeline(
+  requestId: string,
+  opts: RunPipelineOptions = {},
+): Promise<void> {
+  const transcriptOnly = Boolean(opts.transcriptOnly);
   const request = await db.query.flipcastRequests.findFirst({
     where: eq(flipcastRequests.id, requestId),
   });
@@ -97,7 +251,7 @@ export async function runPipeline(requestId: string): Promise<void> {
   try {
     const engineChoice = (request.engine ?? "fish") as TtsEngine;
     const format = (request.format ?? "panel") as FlipcastFormat;
-    const vibe = (request.vibe ?? "curious") as FlipcastVibe;
+    const locale = "en" as const;
     const cfg = formatConfig(format);
     const speed =
       typeof request.speed === "number" ? request.speed : env.defaultSpeed;
@@ -147,13 +301,38 @@ export async function runPipeline(requestId: string): Promise<void> {
         .where(eq(flipcastRequests.id, requestId));
     };
 
+    // Pre-generation classifier — one cheap Haiku call that produces the
+    // metadata object driving downstream prompt branching for THIS episode.
+    // Failures fall through to safe defaults inside classifyEpisode itself,
+    // so this never blocks the run.
+    let metadata: EpisodeMetadata | undefined;
+    try {
+      const cls = await classifyEpisode({
+        topic: request.topic,
+        format,
+        locale,
+      });
+      const { model: clsModel, usage: clsUsage, ...meta } = cls;
+      metadata = meta;
+      await recordUsage(clsModel, clsUsage);
+      console.log(
+        `[classify ${requestId}] ${meta.format_type} | ${meta.time_context} | ${meta.topic_domain} | intent=${meta.user_intent} | tone=${meta.tone_profile} | freshness=${meta.freshness_requirement} | facts=${meta.fact_sensitivity}${meta.speaker_pattern ? ` | speakers=${meta.speaker_pattern}` : ""}`,
+      );
+    } catch (err) {
+      console.warn(
+        `[classify ${requestId}] failed; continuing without metadata directive:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+
     if (cfg.castSize === 1) {
       const full = await generateFullNewscast({
         topic: request.topic,
-        vibe,
         engine: engineChoice,
         outline,
         presetVoiceIds: usablePresetVoiceIds,
+        locale,
+        metadata,
       });
       setup = full.setup;
       preGeneratedScenes = new Map(
@@ -164,10 +343,11 @@ export async function runPipeline(requestId: string): Promise<void> {
       const setupResult = await generateSetup({
         topic: request.topic,
         format,
-        vibe,
         engine: engineChoice,
         outline,
         presetVoiceIds: usablePresetVoiceIds,
+        locale,
+        metadata,
       });
       setup = {
         topicContext: setupResult.topicContext,
@@ -208,12 +388,12 @@ export async function runPipeline(requestId: string): Promise<void> {
       .insert(transcripts)
       .values({
         flipcastRequestId: requestId,
-        rawPromptContext: { topic: request.topic, format, vibe },
+        rawPromptContext: { topic: request.topic, format, metadata: metadata ?? null },
         generatedTranscriptText: "",
         structuredTranscriptJson: {
           topic: request.topic,
           format,
-          vibe,
+          metadata: metadata ?? null,
           topicContext: setup.topicContext,
           panelists: setup.panelists,
           welcomeText: setup.welcomeText,
@@ -236,44 +416,57 @@ export async function runPipeline(requestId: string): Promise<void> {
         outline: setup.outline,
         plan,
         format,
-        vibe,
+        metadata: metadata ?? null,
       },
     });
 
     // --- Stage 2: Welcome synthesis ---
-    await emit("welcome_synth_started", requestId, {
-      message: "Recording welcome message…",
-    });
-
+    // Skipped entirely in transcript-only mode. The setup_complete event
+    // already carried welcomeText, so admins reviewing the transcript see it.
     const moderator = characters.find((c) => c.role === "moderator");
     if (!moderator) throw new Error("Moderator missing from cast.");
 
-    const welcomeAudio = await synthesizeSegment(
-      setup.welcomeText,
-      moderator.voiceId,
-      engineChoice,
-      speed,
-    );
-    const welcomeKey = `requests/${requestId}/welcome.mp3`;
-    const welcomeUrl = await uploadObject(
-      welcomeKey,
-      welcomeAudio,
-      "audio/mpeg",
-    );
-    await db.insert(audioAssets).values({
-      flipcastRequestId: requestId,
-      assetType: "welcome",
-      storageUrl: welcomeUrl,
-    });
-    await db
-      .update(flipcastRequests)
-      .set({ welcomeAudioUrl: welcomeUrl, updatedAt: new Date() })
-      .where(eq(flipcastRequests.id, requestId));
+    if (transcriptOnly) {
+      await emit("welcome_ready", requestId, {
+        message: "Welcome ready (transcript-only — no audio).",
+        data: { url: null, transcriptOnly: true },
+      });
+    } else {
+      await emit("welcome_synth_started", requestId, {
+        message: "Recording welcome message…",
+      });
+      const welcomeAudio = await synthWithRetry({
+        requestId,
+        label: "welcome",
+        call: () =>
+          synthesizeSegment(
+            setup.welcomeText,
+            moderator.voiceId,
+            engineChoice,
+            speed,
+          ),
+      });
+      const welcomeKey = `requests/${requestId}/welcome.mp3`;
+      const welcomeUrl = await uploadObject(
+        welcomeKey,
+        welcomeAudio,
+        "audio/mpeg",
+      );
+      await db.insert(audioAssets).values({
+        flipcastRequestId: requestId,
+        assetType: "welcome",
+        storageUrl: welcomeUrl,
+      });
+      await db
+        .update(flipcastRequests)
+        .set({ welcomeAudioUrl: welcomeUrl, updatedAt: new Date() })
+        .where(eq(flipcastRequests.id, requestId));
 
-    await emit("welcome_ready", requestId, {
-      message: "Welcome message ready.",
-      data: { url: welcomeUrl },
-    });
+      await emit("welcome_ready", requestId, {
+        message: "Welcome message ready.",
+        data: { url: welcomeUrl },
+      });
+    }
 
     // --- Stage 3..N: Generate + synthesize each scene ---
     await setStatus(requestId, "synthesizing");
@@ -334,7 +527,8 @@ export async function runPipeline(requestId: string): Promise<void> {
               sceneIndex,
               totalScenes: plan.totalScenes,
               format,
-              vibe,
+              locale,
+              metadata,
               priorScenesBrief:
                 priorScenesBriefs.length > 0
                   ? priorScenesBriefs.join("\n")
@@ -357,7 +551,8 @@ export async function runPipeline(requestId: string): Promise<void> {
           sceneIndex: nextItem.sceneIndex,
           totalScenes: plan.totalScenes,
           format,
-          vibe,
+          locale,
+          metadata,
           priorScenesBrief: briefForNext,
         });
         // Prevent unhandled rejection if the main loop throws before we await.
@@ -386,6 +581,41 @@ export async function runPipeline(requestId: string): Promise<void> {
         })),
       );
 
+      // Transcript-only mode short-circuits Fish entirely: persist the turns
+      // (already done above), update the structured transcript JSON, emit
+      // scene_ready with a null url + the turns, and move on. No mp3, no
+      // upload, no audio_assets row, no scene URL column update.
+      if (transcriptOnly) {
+        const updatedScenes = [...allSceneTurns];
+        const existing =
+          (savedTranscript.structuredTranscriptJson ?? {}) as Record<
+            string,
+            unknown
+          >;
+        await db
+          .update(transcripts)
+          .set({
+            structuredTranscriptJson: {
+              ...existing,
+              scenes: updatedScenes,
+            },
+          })
+          .where(eq(transcripts.id, savedTranscript.id));
+
+        await emit("scene_ready", requestId, {
+          message: `Scene ${sceneIndex}/${plan.totalScenes} ready (transcript-only).`,
+          percent: Math.round((sceneIndex / plan.totalScenes) * 100),
+          data: {
+            sceneIndex,
+            totalScenes: plan.totalScenes,
+            url: null,
+            turns,
+            transcriptOnly: true,
+          },
+        });
+        continue;
+      }
+
       await emit("scene_synth_started", requestId, {
         message: `Synthesizing scene ${sceneIndex} (${turns.length} turns, fish)…`,
         data: {
@@ -395,32 +625,61 @@ export async function runPipeline(requestId: string): Promise<void> {
         },
       });
 
-      // One-shot scene synthesis. Panel scenes use Fish multi-speaker with
-      // `<|speaker:N|>` tokens and an array reference_id — one mp3 per
-      // scene, no per-turn stitching. Solo (newscast) scenes concatenate
-      // turns with inline pause tags and hit the normal single-voice path.
+      // Scene synthesis. Multi-speaker (panel/pals) is split into chunks:
+      // Fish S2 Pro drifts voices on long multi-speaker calls, so we cap
+      // each call at MAX_TURNS_PER_FISH_CHUNK / MAX_CHARS_PER_FISH_CHUNK,
+      // render each chunk independently with the same reference_id array
+      // (locking the speaker↔voice mapping), then ffmpeg-concat the mp3s.
+      // Solo (newscast) scenes stay one-shot through the single-voice path.
       let mp3: Buffer;
       if (cfg.castSize > 1) {
-        const multiText = turns
-          .map((t) => {
-            const speakerIdx = ROLE_TO_SPEAKER[t.speaker];
-            const pause = pauseTagForMs(t.pauseMsAfter);
-            return `<|speaker:${speakerIdx}|>${t.text}${pause}`;
-          })
-          .join("\n");
-        const voices = [
-          voiceForRole.moderator,
-          voiceForRole.panelist_1,
-          voiceForRole.panelist_2,
-        ]
-          .map((id) => VOICE_BY_ID.get(id))
-          .filter((v): v is NonNullable<typeof v> => !!v);
-        if (voices.length < 2) {
-          throw new Error(
-            `Panel scene ${sceneIndex} needs ≥2 voices, got ${voices.length}`,
-          );
-        }
-        mp3 = await synthesizeWithFishMulti(multiText, voices, speed);
+        // Strict voice resolution — fail loud rather than silently dropping
+        // a missing panelist voice (which would shift speaker indices and
+        // misassign every `<|speaker:N|>` token after it).
+        const requiredSlots: {
+          idx: number;
+          role: SpeakerRole;
+          id: string | undefined;
+        }[] =
+          cfg.castSize === 2
+            ? [
+                { idx: 0, role: "moderator", id: voiceForRole.moderator },
+                { idx: 1, role: "panelist_1", id: voiceForRole.panelist_1 },
+              ]
+            : [
+                { idx: 0, role: "moderator", id: voiceForRole.moderator },
+                { idx: 1, role: "panelist_1", id: voiceForRole.panelist_1 },
+                { idx: 2, role: "panelist_2", id: voiceForRole.panelist_2 },
+              ];
+        const voices = requiredSlots.map((slot) => {
+          const v = slot.id ? VOICE_BY_ID.get(slot.id) : undefined;
+          if (!v) {
+            throw new Error(
+              `Scene ${sceneIndex}: missing voice for speaker:${slot.idx} (${slot.role}) — id="${slot.id}"`,
+            );
+          }
+          return v;
+        });
+
+        const chunks = chunkTurnsForMultiSpeaker(turns);
+        const chunkMp3s = await Promise.all(
+          chunks.map((chunkTurns, chunkIdx) => {
+            const multiText = chunkTurns
+              .map((t) => {
+                const speakerIdx = ROLE_TO_SPEAKER[t.speaker];
+                const pause = pauseTagForMs(t.pauseMsAfter);
+                return `<|speaker:${speakerIdx}|>${t.text}${pause}`;
+              })
+              .join("\n");
+            return synthWithRetry({
+              requestId,
+              label: `scene_${sceneIndex}_chunk_${chunkIdx}`,
+              data: { sceneIndex, chunkIndex: chunkIdx },
+              call: () => synthesizeWithFishMulti(multiText, voices, speed),
+            });
+          }),
+        );
+        mp3 = await concatMp3s(chunkMp3s);
       } else {
         const soloText = turns
           .map((t) => `${t.text}${pauseTagForMs(t.pauseMsAfter)}`)
@@ -431,12 +690,18 @@ export async function runPipeline(requestId: string): Promise<void> {
             `Solo scene ${sceneIndex} missing moderator voice`,
           );
         }
-        mp3 = await synthesizeSegment(
-          soloText,
-          moderatorVoiceId,
-          engineChoice,
-          speed,
-        );
+        mp3 = await synthWithRetry({
+          requestId,
+          label: `scene_${sceneIndex}_solo`,
+          data: { sceneIndex },
+          call: () =>
+            synthesizeSegment(
+              soloText,
+              moderatorVoiceId,
+              engineChoice,
+              speed,
+            ),
+        });
       }
 
       const durationMs = await probeMp3DurationMsFromBuffer(mp3).catch(
@@ -495,6 +760,66 @@ export async function runPipeline(requestId: string): Promise<void> {
       .set({ generatedTranscriptText: transcriptToPlainText(flatTurns) })
       .where(eq(transcripts.id, savedTranscript.id));
 
+    // Post-generation validation pass — five checks (stale timing, missing
+    // subject naming, generic filler, interchangeable speakers, overconfident
+    // claims). Optional and never blocks completion; failures are logged and
+    // emitted via SSE for admin visibility.
+    try {
+      const v = await validateEpisode({
+        topic: request.topic,
+        setup,
+        scenes: allSceneTurns,
+        metadata,
+        locale,
+      });
+      const { model: vModel, usage: vUsage, ...checks } = v;
+      await recordUsage(vModel, vUsage);
+      const summary = (
+        [
+          "stale_timing",
+          "missing_subject_naming",
+          "generic_filler",
+          "interchangeable_speakers",
+          "overconfident_claims",
+          "title_script_mismatch",
+          "weak_early_payoff",
+        ] as const
+      )
+        .map((k) => {
+          const c = checks[k];
+          return `${k}=${c.severity}${c.note ? ` (${c.note})` : ""}`;
+        })
+        .join(" | ");
+      console.log(`[validate ${requestId}] ${summary}`);
+
+      // Persist validation onto the transcript record so the admin view can
+      // surface it without a separate fetch.
+      const existing =
+        (savedTranscript.structuredTranscriptJson ?? {}) as Record<
+          string,
+          unknown
+        >;
+      await db
+        .update(transcripts)
+        .set({
+          structuredTranscriptJson: {
+            ...existing,
+            validation: checks,
+          },
+        })
+        .where(eq(transcripts.id, savedTranscript.id));
+
+      await emit("validation_complete", requestId, {
+        message: "Quality check complete.",
+        data: { validation: checks },
+      });
+    } catch (err) {
+      console.warn(
+        `[validate ${requestId}] failed; continuing without validation:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+
     await db
       .update(flipcastRequests)
       .set({
@@ -505,7 +830,7 @@ export async function runPipeline(requestId: string): Promise<void> {
       })
       .where(eq(flipcastRequests.id, requestId));
 
-    await emit("complete", requestId, { message: "flip.audio ready." });
+    await emit("complete", requestId, { message: "flipcast ready." });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     await db

@@ -128,6 +128,9 @@ export const flipcastRequests = pgTable("flipcast_requests", {
   engine: text("engine").notNull().default("neural"),
   format: text("format").notNull().default("panel"),
   vibe: text("vibe"),
+  // UI locale captured at submit time. Drives generated-content language +
+  // ad rotation language. Defaults to "en" for historical rows.
+  locale: text("locale").notNull().default("en"),
   speed: real("speed"),
   status: requestStatusEnum("status").notNull().default("pending"),
   moderationStatus: moderationStatusEnum("moderation_status")

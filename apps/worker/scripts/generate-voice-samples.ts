@@ -1,13 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { FISH_VOICES, type VoiceLanguage } from "@flipaudio/types";
+import { FISH_VOICES, type VoiceLanguage } from "@flipcast/types";
 import { synthesizeSegment } from "../src/clients/tts";
 
 const OUT_DIR = "/app/apps/web/public/voice-samples";
 
 // Per-voice opener tag for a bit of flair. Mix across the catalog so the
-// previews don't all sound the same. "flip dot audio" so Fish doesn't trip
-// on the literal `.` in flip.audio.
+// previews don't all sound the same. "flipcast" so Fish doesn't trip
+// on the literal `.` in flipcast.
 const VOICE_OPENER: Record<string, string> = {
   // English
   "fa-paula": "warm",
@@ -32,9 +32,9 @@ function sampleScript(
 ): string {
   const opener = VOICE_OPENER[voiceId] ?? "warm";
   if (language === "es") {
-    return `[${opener}] Hola, me llamo ${name}, [short pause] y así sueno en flip dot audio.`;
+    return `[${opener}] Hola, me llamo ${name}, [short pause] y así sueno en flipcast.`;
   }
-  return `[${opener}] Hello, my name is ${name}, [short pause] and this is what I sound like on flip dot audio.`;
+  return `[${opener}] Hello, my name is ${name}, [short pause] and this is what I sound like on flipcast.`;
 }
 
 async function main() {

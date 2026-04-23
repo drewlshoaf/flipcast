@@ -18,10 +18,7 @@ export const env = {
     process.env.FISH_AUDIO_MAX_CONCURRENT,
     5,
   ),
-  defaultSpeed: parseSpeed(
-    process.env.FLIPAUDIO_DEFAULT_SPEED ?? process.env.FLIPCAST_DEFAULT_SPEED,
-    1.0,
-  ),
+  defaultSpeed: parseSpeed(process.env.FLIPCAST_DEFAULT_SPEED, 1.0),
 };
 
 function parsePositiveInt(raw: string | undefined, fallback: number): number {

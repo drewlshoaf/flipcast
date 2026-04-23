@@ -67,12 +67,23 @@ const vibeEnum = z.custom<(typeof VIBE_IDS)[number]>(
 export const createRequestSchema = z.object({
   topic: z.string().trim().min(3).max(500),
   format: z.enum(["newscast", "pals", "panel"]),
-  vibe: vibeEnum,
+  // Vibe is no longer collected from the user — the model picks tone from
+  // the topic content. Kept optional on the schema so legacy clients still
+  // validate; ignored downstream.
+  vibe: vibeEnum.optional(),
   lengthMinutes: z.number().min(MIN_LENGTH_MINUTES).max(MAX_LENGTH_MINUTES),
   voiceIds: z.array(z.string().min(1)).optional(),
   speed: z.number().min(MIN_SPEED).max(MAX_SPEED).optional(),
   // Voice provider override. Only `fish` is supported today; kept on the
   // schema so historical requests carrying the field still validate.
   engine: z.enum(["fish"]).optional(),
+  // Locale field kept on the schema for backward-compat with persisted
+  // historical rows that carried it. New requests don't need to send it —
+  // the system is English-only.
+  locale: z.enum(["en"]).optional(),
+  // Admin-only fast-iteration mode: run the full Claude pipeline (classify
+  // → setup → scenes → validate) but skip Fish TTS synthesis. The transcript
+  // is the deliverable. The API rejects this from non-admin sessions.
+  transcriptOnly: z.boolean().optional(),
 });
 export type CreateRequestInput = z.infer<typeof createRequestSchema>;
