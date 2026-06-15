@@ -32,8 +32,8 @@ export const en = {
     headlineTail: "make the show.",
     subhead:
       "Drop a topic — a headline, a hot take, something you can't stop thinking about — and flipcast produces an episode you can play right now.",
-    startFlip: "Pick a topic",
-    startFlipAria: "Pick a topic",
+    startFlip: "Make a flipcast",
+    startFlipAria: "Make a flipcast",
     surpriseMe: "Surprise me",
     tryOneOfThese: "Try one of these",
     moreTitle: "More to start from.",

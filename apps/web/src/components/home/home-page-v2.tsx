@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { UserChip, type SessionUser } from "@/components/auth/user-chip";
-import { AdPromoBanner } from "@/components/home/ad-promo-banner";
 import { SurpriseMe } from "@/components/home/surprise-me";
 import {
   ARC_BUBBLES,
@@ -129,19 +128,10 @@ export async function HomePageV2({ sessionUser }: HomePageV2Props) {
           </span>
         </Link>
 
-        <div className="hidden max-w-[520px] flex-1 md:block">
-          <AdPromoBanner />
-        </div>
-
         <div className="flex shrink-0 items-center gap-2">
           <UserChip user={sessionUser} loginNext="/studio" />
         </div>
       </header>
-
-      {/* Mobile-only promo banner */}
-      <div className="mb-8 md:hidden">
-        <AdPromoBanner />
-      </div>
 
       {/* Hero stage */}
       <section className="relative mx-auto min-h-[720px] overflow-visible md:min-h-[780px]">
