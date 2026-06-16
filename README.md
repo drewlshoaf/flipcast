@@ -8,10 +8,6 @@ Flipcast is a personalized, on-demand audio show generator. A listener submits a
 
 ![Flipcast architecture overview diagram showing client, API, data, worker, and AI audio service layers](docs/assets/flipcast-architecture-overview.png)
 
-![Flipcast homepage showing topic prompts and the main play/start interface](docs/assets/flipcast-home.png)
-
-![Flipcast studio showing the topic form, format controls, voice options, and generated ideas](docs/assets/flipcast-studio.png)
-
 The project is a TypeScript monorepo with a Next.js web app, a BullMQ worker, shared domain packages, Postgres, Redis, and S3-compatible object storage.
 
 ## What it does
